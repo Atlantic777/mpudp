@@ -52,8 +52,8 @@ void test_chars2mac()
     char mac_string[MAC_LEN_S];
     char mac_string_correct[] = "00:01:02:03:04:05";
 
-    int res = chars2mac(mac_raw, mac_string);
+    char *res = chars2mac(mac_raw, mac_string);
     CU_ASSERT_STRING_EQUAL(mac_string, mac_string_correct);
 
-    CU_ASSERT_EQUAL(res, 0);
+    CU_ASSERT_PTR_EQUAL(res, mac_string);;
 }

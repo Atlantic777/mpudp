@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int mac2chars(unsigned char *mac_string, unsigned char *dest)
+int mac2chars(char *mac_string, unsigned char *dest)
 {
     int i;
     int cursor = 0;
@@ -35,7 +35,7 @@ int mac2chars(unsigned char *mac_string, unsigned char *dest)
     return 0;
 }
 
-int chars2mac(unsigned char *mac_raw, char *mac_string)
+char* chars2mac(unsigned char *mac_raw, char *mac_string)
 {
     int i;
     for(i = 0; i < MAC_LEN-1; i++)
@@ -45,5 +45,5 @@ int chars2mac(unsigned char *mac_raw, char *mac_string)
 
     sprintf(mac_string+i*3, "%02x", mac_raw[i]);
 
-    return 0;
+    return mac_string;
 }
