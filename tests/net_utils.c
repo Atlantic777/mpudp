@@ -2,8 +2,6 @@
 #include "net_utils.h"
 #include "tests/net_utils.h"
 
-unsigned char address[] = "00:01:02:03:04:05";
-unsigned char dest[MAC_LEN];
 
 int init_net_utils()
 {
@@ -17,6 +15,9 @@ int clean_net_utils()
 
 void test_mac2chars()
 {
+    unsigned char address[] = "00:01:02:03:04:05";
+    unsigned char dest[MAC_LEN];
+
     mac2chars(address, dest);
 
     int i = 0;
@@ -25,4 +26,14 @@ void test_mac2chars()
     {
         CU_ASSERT_EQUAL(dest[i], i);
     }
+}
+
+void test_mac2chars_shorter()
+{
+    unsigned char address[] = "00:01:02";
+    unsigned char dest[MAC_LEN];
+
+    int retval = mac2chars(address, dest);
+
+    CU_ASSERT_EQUAL(retval, -1);
 }

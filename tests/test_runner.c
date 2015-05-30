@@ -25,6 +25,8 @@ int main() {
     /******* NET utils ******/
     CU_add_test(net_utils_suite, "Parse MAC addr and store to char array",
                 test_mac2chars);
+    CU_add_test(net_utils_suite, "Make sure to fail on too short MAC string",
+                test_mac2chars_shorter);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

@@ -1,11 +1,18 @@
 #include "net_utils.h"
 #include <stdio.h>
+#include <string.h>
 
 int mac2chars(unsigned char *mac_string, unsigned char *dest)
 {
     int i;
     int cursor = 0;
     unsigned char byte_buff[5] = "0x";
+
+    // Has to be MAC_LEN_S because strlen() doesn't count terminator
+    if(strlen(mac_string) != MAC_LEN_S-1)
+    {
+        return -1;
+    }
 
     for(i = 0; i < MAC_LEN_S; i++)
     {
