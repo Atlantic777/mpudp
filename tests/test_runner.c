@@ -27,6 +27,8 @@ int main() {
                 test_mac2chars);
     CU_add_test(net_utils_suite, "Make sure to fail on too short MAC string",
                 test_mac2chars_shorter);
+    CU_add_test(net_utils_suite, "Detected malformated MAC addr",
+                test_mac2chars_malformated);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

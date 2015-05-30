@@ -37,3 +37,11 @@ void test_mac2chars_shorter()
 
     CU_ASSERT_EQUAL(retval, -1);
 }
+
+void test_mac2chars_malformated()
+{
+    unsigned char dest[MAC_LEN];
+
+    CU_ASSERT_EQUAL(mac2chars(":::::::::::::::::", dest), -1);
+    CU_ASSERT_EQUAL(mac2chars("11111111111111111", dest), -1);
+}

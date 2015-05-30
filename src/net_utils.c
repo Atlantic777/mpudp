@@ -16,15 +16,19 @@ int mac2chars(unsigned char *mac_string, unsigned char *dest)
 
     for(i = 0; i < MAC_LEN_S; i++)
     {
-        if(isxdigit(mac_string[i]))
+        if(isxdigit(mac_string[i]) && cursor < 2)
         {
             byte_buff[2+cursor++] = mac_string[i];
         }
-        else if(mac_string[i] == ':' || mac_string[i] == 0)
+        else if(mac_string[i] == ':' || mac_string[i] == 0 && cursor == 2)
         {
             byte_buff[2+cursor] = 0;
             sscanf(byte_buff, "%hhx", &dest[i/3]);
             cursor = 0;
+        }
+        else
+        {
+            return -1;
         }
     }
 
