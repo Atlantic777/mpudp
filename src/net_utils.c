@@ -34,3 +34,16 @@ int mac2chars(unsigned char *mac_string, unsigned char *dest)
 
     return 0;
 }
+
+int chars2mac(unsigned char *mac_raw, char *mac_string)
+{
+    int i;
+    for(i = 0; i < MAC_LEN-1; i++)
+    {
+        sprintf(mac_string+i*3, "%02x:", mac_raw[i]);
+    }
+
+    sprintf(mac_string+i*3, "%02x", mac_raw[i]);
+
+    return 0;
+}

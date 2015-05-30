@@ -29,6 +29,8 @@ int main() {
                 test_mac2chars_shorter);
     CU_add_test(net_utils_suite, "Detected malformated MAC addr",
                 test_mac2chars_malformated);
+    CU_add_test(net_utils_suite, "Test raw MAC bytes printing to string",
+                test_chars2mac);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

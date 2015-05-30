@@ -5,5 +5,6 @@
 #define MAC_LEN   6  // MAC address length in bytes
 
 int mac2chars(unsigned char*, unsigned char*);
+int chars2mac(unsigned char*, char*);
 
 #endif

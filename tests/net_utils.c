@@ -45,3 +45,15 @@ void test_mac2chars_malformated()
     CU_ASSERT_EQUAL(mac2chars(":::::::::::::::::", dest), -1);
     CU_ASSERT_EQUAL(mac2chars("11111111111111111", dest), -1);
 }
+
+void test_chars2mac()
+{
+    unsigned char mac_raw[MAC_LEN] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
+    char mac_string[MAC_LEN_S];
+    char mac_string_correct[] = "00:01:02:03:04:05";
+
+    int res = chars2mac(mac_raw, mac_string);
+    CU_ASSERT_STRING_EQUAL(mac_string, mac_string_correct);
+
+    CU_ASSERT_EQUAL(res, 0);
+}
