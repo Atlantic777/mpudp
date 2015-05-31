@@ -21,6 +21,12 @@ int main() {
     /******* ETH utils *****/
     CU_add_test(eth_utils_suite, "Build eth frame",
                 test_eth_build_frame);
+    CU_add_test(eth_utils_suite, "eth frame to chars",
+                test_eth_frame2chars);
+    CU_add_test(eth_utils_suite, "eth frame length",
+                test_eth_frame_len);
+    CU_add_test(eth_utils_suite, "eth set data",
+                test_eth_set_data);
 
     /******* NET utils ******/
     CU_add_test(net_utils_suite, "Parse MAC addr and store to char array",

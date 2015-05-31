@@ -24,4 +24,31 @@ int eth_compile_frame(eth_frame_t *frame,
 
 int eth_set_data(eth_frame_t *frame, unsigned char *payload, int len)
 {
+    if(frame->data != NULL)
+    {
+        free(frame->data);
+    }
+
+    frame->data = calloc(sizeof(unsigned char), len);
+    memcpy(frame->data, payload, len);
+
+    frame->data_len = len;
+
+}
+
+int eth_frame_len(eth_frame_t *frame)
+{
+    return ETH_FRAME_PREFIX_LEN+frame->data_len;
+}
+
+int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
+{
+    *buff = malloc(eth_frame_len(frame));
+
+    memcpy(*buff, frame->dst, MAC_LEN);
+    memcpy(*buff+MAC_LEN, frame->src, MAC_LEN);
+    memcpy(*buff+2*MAC_LEN, frame->type, 2);
+    memcpy(*buff+ETH_FRAME_PREFIX_LEN, frame->data, frame->data_len);
+
+
 }

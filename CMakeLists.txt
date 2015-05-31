@@ -17,7 +17,7 @@ target_link_libraries(mpudp pcap)
 
 # test libs
 add_library(t_eth_utils tests/eth_utils.c)
-target_link_libraries(t_eth_utils eth_utils)
+target_link_libraries(t_eth_utils eth_utils net_utils)
 add_library(t_net_utils tests/net_utils.c)
 target_link_libraries(t_net_utils net_utils)
 

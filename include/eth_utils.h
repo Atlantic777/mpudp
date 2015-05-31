@@ -2,6 +2,7 @@
 #define ETH_UTILS_H
 
 #include "net_utils.h"
+#define ETH_FRAME_PREFIX_LEN 2*MAC_LEN+2 // 14
 
 typedef struct eth_frame {
     unsigned char src[MAC_LEN];
@@ -17,5 +18,7 @@ int eth_compile_frame(eth_frame_t*,
         unsigned char*);
 
 int eth_set_data(eth_frame_t*, unsigned char*, int);
+int eth_frame_len(eth_frame_t*);
+int eth_frame2chars(eth_frame_t *, unsigned char**);
 
 #endif
