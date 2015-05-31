@@ -15,7 +15,7 @@ int clean_net_utils()
 
 void test_mac2chars()
 {
-    unsigned char address[] = "00:01:02:03:04:05";
+    char address[] = "00:01:02:03:04:05";
     unsigned char dest[MAC_LEN];
 
     mac2chars(address, dest);
@@ -30,7 +30,7 @@ void test_mac2chars()
 
 void test_mac2chars_shorter()
 {
-    unsigned char address[] = "00:01:02";
+    char address[] = "00:01:02";
     unsigned char dest[MAC_LEN];
 
     int retval = mac2chars(address, dest);

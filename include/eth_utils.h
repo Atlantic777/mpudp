@@ -7,11 +7,13 @@ typedef struct eth_frame {
     unsigned char src[MAC_LEN];
     unsigned char dst[MAC_LEN];
     unsigned char type[2];
+    unsigned char *data;
+    int data_len;
 } eth_frame_t;
 
 int eth_compile_frame(eth_frame_t*,
-        unsigned char*,
-        unsigned char*,
+        char*,
+        char*,
         unsigned char*);
 
 #endif

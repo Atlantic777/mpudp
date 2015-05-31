@@ -3,8 +3,8 @@
 #include <string.h>
 
 int eth_compile_frame(eth_frame_t *frame,
-                      unsigned char *dst_mac,
-                      unsigned char *src_mac,
+                      char *dst_mac,
+                      char *src_mac,
                       unsigned char *eth_type)
 {
     if(frame == NULL)
