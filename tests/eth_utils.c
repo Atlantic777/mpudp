@@ -100,3 +100,8 @@ void test_eth_frame_len()
 
     CU_ASSERT_EQUAL(eth_frame_len(&frame), target_len);
 }
+
+void test_eth_send_frame()
+{
+    CU_FAIL("finish the test");
+}

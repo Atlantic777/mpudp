@@ -3,11 +3,12 @@
 #include <CUnit/Basic.h>
 #include "tests/eth_utils.h"
 #include "tests/net_utils.h"
+#include "tests/pcap_utils.h"
 
 int main() {
     CU_initialize_registry();
 
-    CU_pSuite eth_utils_suite, net_utils_suite;
+    CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite;
 
     /******* Suites *******/
     eth_utils_suite = CU_add_suite("eth utils",
@@ -18,6 +19,10 @@ int main() {
                                     init_net_utils,
                                     clean_net_utils);
 
+    pcap_utils_suite = CU_add_suite("pcap utils",
+                                    init_pcap_utils,
+                                    clean_pcap_utils);
+
     /******* ETH utils *****/
     CU_add_test(eth_utils_suite, "Build eth frame",
                 test_eth_build_frame);
@@ -27,6 +32,8 @@ int main() {
                 test_eth_frame_len);
     CU_add_test(eth_utils_suite, "eth set data",
                 test_eth_set_data);
+    CU_add_test(eth_utils_suite, "eth send an eth frame",
+                test_eth_send_frame);
 
     /******* NET utils ******/
     CU_add_test(net_utils_suite, "Parse MAC addr and store to char array",
@@ -37,6 +44,10 @@ int main() {
                 test_mac2chars_malformated);
     CU_add_test(net_utils_suite, "Test raw MAC bytes printing to string",
                 test_chars2mac);
+
+    /******* PCAP utils ******/
+    /* CU_add_test(pcap_utils_suite, "Get iface MAC as string", */
+    /*             test_read_if_mac_s); */
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);
