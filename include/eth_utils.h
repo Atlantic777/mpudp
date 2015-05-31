@@ -16,4 +16,6 @@ int eth_compile_frame(eth_frame_t*,
         char*,
         unsigned char*);
 
+int eth_set_data(eth_frame_t*, unsigned char*, int);
+
 #endif

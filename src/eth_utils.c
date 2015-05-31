@@ -16,6 +16,12 @@ int eth_compile_frame(eth_frame_t *frame,
     mac2chars(dst_mac, frame->dst);
 
     memcpy(frame->type, eth_type, 2);
+    frame->data = NULL;
+    frame->data_len = 0;
 
     return 0;
+}
+
+int eth_set_data(eth_frame_t *frame, unsigned char *payload, int len)
+{
 }
