@@ -28,3 +28,11 @@ void test_read_if_mac_s()
 
     CU_ASSERT_PTR_NOT_NULL(pcapu_read_if_mac_s(dev_if->name, &mac_s));
 }
+
+void test_find_by_name()
+{
+    pcap_if_t *dev_if = NULL;
+    char dev_name[] = "wlan";
+    pcapu_find_dev_by_name(&dev_if, dev_name);
+    CU_ASSERT_PTR_NOT_NULL(dev_if);
+}

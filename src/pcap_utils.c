@@ -29,6 +29,28 @@ int pcapu_find_any(pcap_if_t **dev)
     return -1;
 }
 
+int pcapu_find_dev_by_name(pcap_if_t **dev, char *name)
+{
+    if(dev == NULL || name == NULL || strlen(name) == 0)
+    {
+        return -1;
+    }
+
+    pcap_if_t *alldevs, *d;
+    char eb[PCAP_ERRBUF_SIZE];
+
+    pcap_findalldevs(&alldevs, eb);
+
+    for(d = alldevs; d != NULL; d = d->next)
+    {
+        if(strstr(d->name, name))
+        {
+            *dev = d;
+            return 0;
+        }
+    }
+}
+
 char* pcapu_read_if_mac_s(char *dev_name, char **mac_s)
 {
     char path[256];

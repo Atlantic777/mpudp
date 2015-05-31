@@ -50,6 +50,8 @@ int main() {
                 test_pcapu_find_any);
     CU_add_test(pcap_utils_suite, "Get iface MAC as string",
                 test_read_if_mac_s);
+    CU_add_test(pcap_utils_suite, "Find iface by name",
+                test_find_by_name);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);
