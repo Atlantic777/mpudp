@@ -10,6 +10,8 @@ include_directories(include)
 # common local libs
 add_library(net_utils src/net_utils.c)
 add_library(eth_utils src/eth_utils.c)
+add_library(pcap_utils src/pcap_utils.c)
+target_link_libraries(pcap_utils pcap)
 
 # client/server executables
 add_executable(mpudp src/main.c)
@@ -23,7 +25,7 @@ add_library(t_net_utils tests/net_utils.c)
 target_link_libraries(t_net_utils net_utils)
 
 add_library(t_pcap_utils tests/pcap_utils.c)
-target_link_libraries(t_pcap_utils net_utils)
+target_link_libraries(t_pcap_utils net_utils pcap pcap_utils)
 
 # test runner executable
 add_executable(unit-test tests/test_runner.c)

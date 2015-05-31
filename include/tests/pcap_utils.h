@@ -5,5 +5,6 @@ int init_pcap_utils();
 int clean_pcap_utils();
 
 void test_read_if_mac_s();
+void test_pcapu_find_any();
 
 #endif

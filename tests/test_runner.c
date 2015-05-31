@@ -46,8 +46,10 @@ int main() {
                 test_chars2mac);
 
     /******* PCAP utils ******/
-    /* CU_add_test(pcap_utils_suite, "Get iface MAC as string", */
-    /*             test_read_if_mac_s); */
+    CU_add_test(pcap_utils_suite, "Get any apropriate interface",
+                test_pcapu_find_any);
+    CU_add_test(pcap_utils_suite, "Get iface MAC as string",
+                test_read_if_mac_s);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);
