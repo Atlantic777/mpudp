@@ -4,6 +4,7 @@
 #include <string.h>
 #include <net_utils.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 int pcapu_find_any(pcap_if_t **dev)
 {
@@ -69,4 +70,13 @@ char* pcapu_read_if_mac_s(char *dev_name, char **mac_s)
     }
 
     return addr;
+}
+
+void check_root()
+{
+    if(getuid() != 0)
+    {
+        puts("You should run this as root!");
+        exit(-1);
+    }
 }

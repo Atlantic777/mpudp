@@ -33,4 +33,4 @@ target_link_libraries(unit-test cunit t_eth_utils t_net_utils t_pcap_utils)
 
 # playground
 add_executable(playground tests/playground.c)
-target_link_libraries(playground eth_utils net_utils pcap)
+target_link_libraries(playground eth_utils net_utils pcap pcap_utils)

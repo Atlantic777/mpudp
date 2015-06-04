@@ -6,6 +6,8 @@
 #include "tests/pcap_utils.h"
 
 int main() {
+    check_root();
+
     CU_initialize_registry();
 
     CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite;

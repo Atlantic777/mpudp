@@ -8,5 +8,6 @@
 int pcapu_find_any(pcap_if_t **);
 int pcapu_find_dev_by_name(pcap_if_t **, char*);
 char* pcapu_read_if_mac_s(char *, char **);
+void check_root();
 
 #endif

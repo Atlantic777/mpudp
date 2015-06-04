@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include "eth_utils.h"
 #include "net_utils.h"
+#include "pcap_utils.h"
 #include <stdlib.h>
 #include <time.h>
 
 int main()
 {
+    check_root();
+
     char errbuf[256];
 
     /* pcap_t *dev = pcap_open_live("eth0", 1024, 1, 1000, errbuf); */
