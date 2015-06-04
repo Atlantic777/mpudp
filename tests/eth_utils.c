@@ -4,6 +4,7 @@
 #include <CUnit/CUnit.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pcap.h>
 
 int init_eth_utils()
 {
@@ -103,5 +104,45 @@ void test_eth_frame_len()
 
 void test_eth_send_frame()
 {
-    CU_FAIL("finish the test");
+    char errbuf[PCAP_ERRBUF_SIZE];
+    eth_frame_t frame;
+
+    // open dump file
+    pcap_t *dev = pcap_open_dead(DLT_EN10MB, 1024);
+    if(dev == NULL) puts(errbuf);
+
+    pcap_dumper_t *dump = pcap_dump_open(dev, "dump.pcap");
+    if(dump == NULL) puts(errbuf);
+
+    // create dummy eth frame
+    prepare_sample_frame(&frame);
+    unsigned char *buff;
+    int len = eth_frame_len(&frame);
+    buff = malloc(len);
+    eth_frame2chars(&frame, &buff);
+
+    // construct pcap pkt header
+    struct pcap_pkthdr hdr;
+    hdr.ts.tv_sec = time(NULL);
+    hdr.ts.tv_usec = 0;
+    hdr.caplen = len;
+    hdr.len = len;
+
+    // write dummy frame and flush dumper
+    pcap_dump((unsigned char*)dump, &hdr, buff);
+    pcap_dump_flush(dump);
+
+    // check if it's written
+    pcap_t *read = pcap_open_offline("dump.pcap", errbuf);
+    if(read == NULL) puts(errbuf);
+
+    struct pcap_pkthdr *header;
+    const u_char *data;
+    pcap_next_ex(read, &header, &data);
+
+    CU_ASSERT_EQUAL(header->len, len);
+
+    // close everything
+    free(dev);
+    free(buff);
 }
