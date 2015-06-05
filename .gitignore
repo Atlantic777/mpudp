@@ -8,3 +8,4 @@ playground
 unit-test
 *.pcap
 *.a
+playground.c
