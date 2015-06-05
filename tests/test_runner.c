@@ -4,13 +4,15 @@
 #include "tests/eth_utils.h"
 #include "tests/net_utils.h"
 #include "tests/pcap_utils.h"
+#include "tests/udp_utils.h"
 
 int main() {
     check_root();
 
     CU_initialize_registry();
 
-    CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite;
+    CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite,
+              udp_utils_suite;
 
     /******* Suites *******/
     eth_utils_suite = CU_add_suite("eth utils",
@@ -24,6 +26,10 @@ int main() {
     pcap_utils_suite = CU_add_suite("pcap utils",
                                     init_pcap_utils,
                                     clean_pcap_utils);
+
+    udp_utils_suite = CU_add_suite("udp utils",
+                                    init_udp_utils,
+                                    clean_udp_utils);
 
     /******* ETH utils *****/
     CU_add_test(eth_utils_suite, "Build eth frame",
@@ -54,6 +60,15 @@ int main() {
                 test_read_if_mac_s);
     CU_add_test(pcap_utils_suite, "Find iface by name",
                 test_find_by_name);
+
+    CU_add_test(udp_utils_suite, "Build an UDP packet",
+                test_udp_build_packet);
+
+    CU_add_test(udp_utils_suite, "udp packet to chars",
+                test_udp_packet2chars);
+
+    CU_add_test(udp_utils_suite, "udp packet length",
+                test_udp_packet_len);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);
