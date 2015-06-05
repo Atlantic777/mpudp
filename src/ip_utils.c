@@ -18,8 +18,11 @@ int ip_build_packet(ip_packet_t *packet, char *src_ip, char *dst_ip)
 void ip_hdr_set_common(ip_packet_t *packet)
 {
     // set ip proto version to IPv4
-    // and set internet header len to 5
+    // and set internet header len to 20
     set_octet(&packet->first, 3, 4 << 4 | 5);
+
+    // set initial total length just to header len (in bytes)
+    ip_set_len(packet, 20);
 
     // set type of service to zero - we don't use it
     set_octet(&packet->first, 2, 0);
@@ -43,19 +46,37 @@ void set_octet(uint32_t *quad, uint8_t pos, uint8_t val)
     *quad = *quad | (val << pos*8);
 }
 
-uint8_t get_octet(uint32_t *quad, int pos)
+void set_double(uint32_t *quad, uint8_t pos, uint16_t val)
 {
+    // reset the two-byte
+    *quad = *quad & ~(0xFFFF << pos*16);
+
+    // set the two-byte
+    *quad = *quad | (val << pos*16);
+
+}
+
+uint8_t get_octet(uint32_t *quad, uint8_t pos)
+{
+    // casting will do the masking
     return (uint8_t)(*quad >> pos*8);
+}
+
+uint16_t get_double(uint32_t *quad, uint8_t pos)
+{
+    // casting will do the masking
+    return (uint16_t)(*quad >> pos*16);
 }
 
 void ip_print_packet(ip_packet_t *packet)
 {
     puts("\nDUMPING IP PACKET");
     printf("Version:\t%d\n", ip_get_version(packet));
-    printf("IHL:\t\t%d\n", ip_get_ihl(packet));
-    printf("TOS:\t\t%d\n", ip_get_tos(packet));
-    printf("TTL:\t\t%d\n", ip_get_ttl(packet));
-    printf("Proto:\t\t%d\n", ip_get_proto(packet));
+    printf("IHL:\t\t%u\n", ip_get_ihl(packet));
+    printf("Len:\t\t%u\n", ip_get_len(packet));
+    printf("TOS:\t\t%u\n", ip_get_tos(packet));
+    printf("TTL:\t\t%u\n", ip_get_ttl(packet));
+    printf("Proto:\t\t%u\n", ip_get_proto(packet));
     printf("Src:\t\t%s\n", ip_hdr_get_addr_s(packet, ADDR_SRC));
     printf("Dst:\t\t%s\n", ip_hdr_get_addr_s(packet, ADDR_DST));
 }
@@ -115,4 +136,15 @@ char* ip_hdr_get_addr_s(ip_packet_t *packet, int way)
     memcpy(&addr, &rev, 4);
 
     return inet_ntoa(addr);
+}
+
+uint16_t ip_get_len(ip_packet_t *packet)
+{
+    return get_double(&packet->first, 0);
+}
+
+uint16_t ip_set_len(ip_packet_t *packet, uint16_t len)
+{
+    set_double(&packet->first, 0, len);
+    return 0;
 }
