@@ -68,6 +68,9 @@ int main() {
                 test_find_by_name);
 
     /******* IP utils ******/
+    CU_add_test(ip_utils_suite, "Set common IP hdr values",
+                test_ip_set_common);
+
     CU_add_test(ip_utils_suite, "Build an IP packet",
                 test_ip_build_packet);
 

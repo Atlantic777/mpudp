@@ -9,10 +9,13 @@ include_directories(include)
 
 # common local libs
 add_library(net_utils src/net_utils.c)
+
 add_library(eth_utils src/eth_utils.c)
+
 add_library(pcap_utils src/pcap_utils.c)
-add_library(ip_utils src/ip_utils.c)
 target_link_libraries(pcap_utils pcap)
+
+add_library(ip_utils src/ip_utils.c)
 
 # client/server executables
 add_executable(mpudp src/main.c)
