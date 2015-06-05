@@ -80,3 +80,16 @@ void check_root()
         exit(-1);
     }
 }
+
+void pcapu_print_all_devs()
+{
+    pcap_if_t *alldevs, *d;
+    char eb[PCAP_ERRBUF_SIZE];
+
+    pcap_findalldevs(&alldevs, eb);
+
+    for(d = alldevs; d != NULL; d = d->next)
+    {
+        puts(d->name);
+    }
+}
