@@ -11,6 +11,7 @@ include_directories(include)
 add_library(net_utils src/net_utils.c)
 add_library(eth_utils src/eth_utils.c)
 add_library(pcap_utils src/pcap_utils.c)
+add_library(ip_utils src/ip_utils.c)
 target_link_libraries(pcap_utils pcap)
 
 # client/server executables
@@ -27,9 +28,11 @@ target_link_libraries(t_net_utils net_utils)
 add_library(t_pcap_utils tests/pcap_utils.c)
 target_link_libraries(t_pcap_utils net_utils pcap pcap_utils)
 
+add_library(t_ip_utils tests/ip_utils.c)
+target_link_libraries(t_ip_utils ip_utils)
+
 add_library(t_udp_utils tests/udp_utils.c)
 
-add_library(t_ip_utils tests/ip_utils.c)
 
 # test runner executable
 add_executable(unit-test tests/test_runner.c)
@@ -38,4 +41,4 @@ target_link_libraries(unit-test t_udp_utils t_ip_utils)
 
 # playground
 add_executable(playground tests/playground.c)
-target_link_libraries(playground eth_utils net_utils pcap pcap_utils)
+target_link_libraries(playground eth_utils net_utils pcap pcap_utils ip_utils)

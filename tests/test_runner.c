@@ -5,6 +5,7 @@
 #include "tests/net_utils.h"
 #include "tests/pcap_utils.h"
 #include "tests/udp_utils.h"
+#include "tests/ip_utils.h"
 
 int main() {
     check_root();
@@ -12,7 +13,7 @@ int main() {
     CU_initialize_registry();
 
     CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite,
-              udp_utils_suite;
+              udp_utils_suite, ip_utils_suite;
 
     /******* Suites *******/
     eth_utils_suite = CU_add_suite("eth utils",
@@ -27,9 +28,14 @@ int main() {
                                     init_pcap_utils,
                                     clean_pcap_utils);
 
+    ip_utils_suite = CU_add_suite("ip utils",
+                                    init_ip_utils,
+                                    clean_ip_utils);
+
     udp_utils_suite = CU_add_suite("udp utils",
                                     init_udp_utils,
                                     clean_udp_utils);
+
 
     /******* ETH utils *****/
     CU_add_test(eth_utils_suite, "Build eth frame",
@@ -61,6 +67,17 @@ int main() {
     CU_add_test(pcap_utils_suite, "Find iface by name",
                 test_find_by_name);
 
+    /******* IP utils ******/
+    CU_add_test(ip_utils_suite, "Build an IP packet",
+                test_ip_build_packet);
+
+    CU_add_test(ip_utils_suite, "ip packet to chars",
+                test_ip_packet2chars);
+
+    CU_add_test(ip_utils_suite, "ip packet len",
+                test_ip_packet_len);
+
+    /******* UDP utils ******/
     CU_add_test(udp_utils_suite, "Build an UDP packet",
                 test_udp_build_packet);
 
@@ -69,6 +86,7 @@ int main() {
 
     CU_add_test(udp_utils_suite, "udp packet length",
                 test_udp_packet_len);
+
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);
