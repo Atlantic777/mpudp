@@ -29,10 +29,12 @@ target_link_libraries(t_pcap_utils net_utils pcap pcap_utils)
 
 add_library(t_udp_utils tests/udp_utils.c)
 
+add_library(t_ip_utils tests/ip_utils.c)
+
 # test runner executable
 add_executable(unit-test tests/test_runner.c)
 target_link_libraries(unit-test cunit t_eth_utils t_net_utils t_pcap_utils)
-target_link_libraries(unit-test t_udp_utils)
+target_link_libraries(unit-test t_udp_utils t_ip_utils)
 
 # playground
 add_executable(playground tests/playground.c)
