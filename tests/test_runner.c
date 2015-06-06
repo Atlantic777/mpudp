@@ -84,6 +84,9 @@ int main() {
     CU_add_test(udp_utils_suite, "Build an UDP dgram header",
                 test_udp_build_dgram_hdr);
 
+    CU_add_test(udp_utils_suite, "Build an UDP dgram pseudo header",
+                test_udp_build_pseudo_hdr);
+
     CU_add_test(udp_utils_suite, "Build an UDP dgram",
                 test_udp_build_dgram);
 
