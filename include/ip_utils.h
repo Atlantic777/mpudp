@@ -41,5 +41,6 @@ uint16_t get_double(uint32_t *, uint8_t);
 void ip_print_packet(ip_packet_t *);
 
 int ip_packet2chars(ip_packet_t *, unsigned char **);
+int ip_hdr2chars(ip_packet_t *, unsigned char*);
 
 #endif

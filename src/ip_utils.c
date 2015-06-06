@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <string.h>
+#include <stdlib.h>
 
 int ip_build_packet(ip_packet_t *packet, char *src_ip, char *dst_ip)
 {
@@ -147,4 +148,37 @@ uint16_t ip_set_len(ip_packet_t *packet, uint16_t len)
 {
     set_double(&packet->first, 0, len);
     return 0;
+}
+
+int ip_hdr2chars(ip_packet_t *packet, unsigned char *buff)
+{
+    int i;
+
+    *(buff+0) = ip_get_version(packet)<<4 | ip_get_ihl(packet);
+    *(buff+1) = ip_get_tos(packet);
+
+    *(buff+2) = ip_get_len(packet) >> 8;
+    *(buff+3) = ip_get_len(packet)  & 0xFF;
+
+    for(i = 4; i < 8; i++)
+        *(buff+i) = 0;
+
+    *(buff+8) = ip_get_ttl(packet);
+    *(buff+9) = ip_get_proto(packet);
+    *(buff+10) = ip_get_crc(packet) >> 8;
+    *(buff+11) = ip_get_crc(packet)  & 0xFF;
+
+    for(i = 0; i < 4; i++)
+        *(buff+12+i) = ip_hdr_get_addr(packet, ADDR_SRC) >> ( ( 3-i )*8 );
+
+    for(i = 0; i < 4; i++)
+        *(buff+16+i) = ip_hdr_get_addr(packet, ADDR_DST) >> ( ( 3-i )*8 );
+}
+
+int ip_packet2chars(ip_packet_t *packet, unsigned char **buff)
+{
+    uint16_t len = ip_get_len(packet);
+    *buff = malloc(len);
+
+    ip_hdr2chars(packet, *buff);
 }

@@ -1,6 +1,7 @@
 #include "tests/ip_utils.h"
 #include <CUnit/CUnit.h>
 #include "ip_utils.h"
+#include <stdio.h>
 
 char src_ip[] = "192.168.101.1";
 char dst_ip[] = "192.168.101.2";
@@ -46,7 +47,17 @@ void test_ip_build_packet()
 
 void test_ip_packet2chars()
 {
-    CU_FAIL("Finish the test!");
+    ip_packet_t packet;
+
+    ip_build_packet(&packet, src_ip, dst_ip);
+
+    unsigned char *buff;
+    ip_packet2chars(&packet, &buff);
+
+    uint16_t len = ip_get_len(&packet);
+    int i = 0;
+
+    CU_ASSERT_EQUAL(*(buff+12), 192);
 }
 
 void test_ip_packet_len()
