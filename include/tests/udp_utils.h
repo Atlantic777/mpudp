@@ -4,8 +4,9 @@
 int init_udp_utils();
 int clean_udp_utils();
 
-void test_udp_build_packet();
-void test_udp_packet2chars();
-void test_udp_packet_len();
+void test_udp_build_dgram_hdr();
+void test_udp_build_dgram();
+void test_udp_dgram2chars();
+void test_udp_dgram_len();
 
 #endif

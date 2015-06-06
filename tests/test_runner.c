@@ -81,14 +81,17 @@ int main() {
                 test_ip_packet_len);
 
     /******* UDP utils ******/
-    CU_add_test(udp_utils_suite, "Build an UDP packet",
-                test_udp_build_packet);
+    CU_add_test(udp_utils_suite, "Build an UDP dgram header",
+                test_udp_build_dgram_hdr);
 
-    CU_add_test(udp_utils_suite, "udp packet to chars",
-                test_udp_packet2chars);
+    CU_add_test(udp_utils_suite, "Build an UDP dgram",
+                test_udp_build_dgram);
 
-    CU_add_test(udp_utils_suite, "udp packet length",
-                test_udp_packet_len);
+    CU_add_test(udp_utils_suite, "udp dgram to chars",
+                test_udp_dgram2chars);
+
+    CU_add_test(udp_utils_suite, "udp dgram length",
+                test_udp_dgram_len);
 
 
     /******* test runner setup ******/
