@@ -3,6 +3,7 @@
 
 #include "net_utils.h"
 #define ETH_FRAME_PREFIX_LEN 2*MAC_LEN+2 // 14
+#define ETH_TYPE_IP "\x08\x00"
 
 typedef struct eth_frame {
     unsigned char src[MAC_LEN];
