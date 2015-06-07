@@ -53,6 +53,9 @@ void test_udp_build_dgram()
 
 void test_udp_dgram2chars()
 {
+    // build whole dgram
+    // call 2 chars
+    // check it
     CU_FAIL("Finish the test!");
 }
 

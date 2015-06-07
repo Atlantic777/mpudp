@@ -80,6 +80,12 @@ int main() {
     CU_add_test(ip_utils_suite, "ip packet len",
                 test_ip_packet_len);
 
+    CU_add_test(ip_utils_suite, "IP set data",
+                test_ip_set_data);
+
+    CU_add_test(ip_utils_suite, "IP packet to chars, with payload",
+                test_ip_packet2chars_payload);
+
     /******* UDP utils ******/
     CU_add_test(udp_utils_suite, "Build an UDP dgram header",
                 test_udp_build_dgram_hdr);
@@ -95,7 +101,6 @@ int main() {
 
     CU_add_test(udp_utils_suite, "udp dgram length",
                 test_udp_dgram_len);
-
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

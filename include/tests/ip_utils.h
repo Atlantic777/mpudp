@@ -8,5 +8,7 @@ void test_ip_build_packet();
 void test_ip_packet2chars();
 void test_ip_packet_len();
 void test_ip_set_common();
+void test_ip_packet2chars_payload();
+void test_ip_set_data();
 
 #endif

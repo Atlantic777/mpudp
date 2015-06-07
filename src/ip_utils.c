@@ -13,6 +13,8 @@ int ip_build_packet(ip_packet_t *packet, char *src_ip, char *dst_ip)
     ip_hdr_set_addr(packet, ADDR_SRC, src_ip);
     ip_hdr_set_addr(packet, ADDR_DST, dst_ip);
 
+    packet->payload = NULL;
+
     return 0;
 }
 
@@ -20,53 +22,22 @@ void ip_hdr_set_common(ip_packet_t *packet)
 {
     // set ip proto version to IPv4
     // and set internet header len to 20
-    set_octet(&packet->first, 3, 4 << 4 | 5);
+    packet->first[0] = 4 << 4 | 5;
+
+    // set type of service to zero - we don't use it
+    packet->first[1] = 0;
 
     // set initial total length just to header len (in bytes)
     ip_set_len(packet, 20);
 
-    // set type of service to zero - we don't use it
-    set_octet(&packet->first, 2, 0);
-
     // set id, fragment num and fragmentation bits to 0
-    packet->second = 0;
+    memset(packet->second, 0, 4);
 
     // set TTL to 16
-    set_octet(&packet->third, 3, 16);
+    packet->third[0] = 16;
 
     // set protocol to UDP
-    set_octet(&packet->third, 2, PROTO_UDP);
-}
-
-void set_octet(uint32_t *quad, uint8_t pos, uint8_t val)
-{
-    // reset the byte
-    *quad = *quad & ~(0xFF << pos*8);
-
-    // set the byte
-    *quad = *quad | (val << pos*8);
-}
-
-void set_double(uint32_t *quad, uint8_t pos, uint16_t val)
-{
-    // reset the two-byte
-    *quad = *quad & ~(0xFFFF << pos*16);
-
-    // set the two-byte
-    *quad = *quad | (val << pos*16);
-
-}
-
-uint8_t get_octet(uint32_t *quad, uint8_t pos)
-{
-    // casting will do the masking
-    return (uint8_t)(*quad >> pos*8);
-}
-
-uint16_t get_double(uint32_t *quad, uint8_t pos)
-{
-    // casting will do the masking
-    return (uint16_t)(*quad >> pos*16);
+    packet->third[1] = PROTO_UDP;
 }
 
 void ip_print_packet(ip_packet_t *packet)
@@ -84,27 +55,27 @@ void ip_print_packet(ip_packet_t *packet)
 
 uint8_t ip_get_version(ip_packet_t *packet)
 {
-    return get_octet(&packet->first, 3) >> 4;
+    return packet->first[0] >> 4;
 }
 
 uint8_t ip_get_ihl(ip_packet_t *packet)
 {
-    return get_octet(&packet->first, 3) & 0xF;
+    return packet->first[0] & 0xF;
 }
 
 uint8_t ip_get_tos(ip_packet_t *packet)
 {
-    return get_octet(&packet->first, 2);
+    return packet->first[1];
 }
 
 uint8_t ip_get_ttl(ip_packet_t *packet)
 {
-    return get_octet(&packet->third, 3);
+    return packet->third[0];
 }
 
 uint8_t ip_get_proto(ip_packet_t *packet)
 {
-    return get_octet(&packet->third, 2);
+    return packet->third[1];
 }
 
 uint16_t ip_get_crc(ip_packet_t *packet)
@@ -116,16 +87,18 @@ uint16_t ip_get_crc(ip_packet_t *packet)
 
 int ip_hdr_set_addr(ip_packet_t *packet, int way, char *addr)
 {
-    in_addr_t a = inet_addr(addr);
-    uint32_t  b = ntohl(a);
-    memcpy(packet+way*4, &b, 4);
+    uint32_t a;
+    inet_pton(AF_INET, addr, &a);
+    memcpy(packet->first+way*4, &a, 4);
+
     return 0;
 }
 
 uint32_t ip_hdr_get_addr(ip_packet_t *packet, int way)
 {
     uint32_t res;
-    memcpy(&res, packet+way*4, 4);
+    memcpy(&res, packet->first+way*4, 4);
+    res = htonl(res);
     return res;
 }
 
@@ -141,38 +114,14 @@ char* ip_hdr_get_addr_s(ip_packet_t *packet, int way)
 
 uint16_t ip_get_len(ip_packet_t *packet)
 {
-    return get_double(&packet->first, 0);
+    return packet->first[2] << 8 | packet->first[3];
 }
 
 uint16_t ip_set_len(ip_packet_t *packet, uint16_t len)
 {
-    set_double(&packet->first, 0, len);
+    packet->first[2] = len >> 8;
+    packet->first[3] = len & 0xFF;
     return 0;
-}
-
-int ip_hdr2chars(ip_packet_t *packet, unsigned char *buff)
-{
-    int i;
-
-    *(buff+0) = ip_get_version(packet)<<4 | ip_get_ihl(packet);
-    *(buff+1) = ip_get_tos(packet);
-
-    *(buff+2) = ip_get_len(packet) >> 8;
-    *(buff+3) = ip_get_len(packet)  & 0xFF;
-
-    for(i = 4; i < 8; i++)
-        *(buff+i) = 0;
-
-    *(buff+8) = ip_get_ttl(packet);
-    *(buff+9) = ip_get_proto(packet);
-    *(buff+10) = ip_get_crc(packet) >> 8;
-    *(buff+11) = ip_get_crc(packet)  & 0xFF;
-
-    for(i = 0; i < 4; i++)
-        *(buff+12+i) = ip_hdr_get_addr(packet, ADDR_SRC) >> ( ( 3-i )*8 );
-
-    for(i = 0; i < 4; i++)
-        *(buff+16+i) = ip_hdr_get_addr(packet, ADDR_DST) >> ( ( 3-i )*8 );
 }
 
 int ip_packet2chars(ip_packet_t *packet, unsigned char **buff)
@@ -180,5 +129,26 @@ int ip_packet2chars(ip_packet_t *packet, unsigned char **buff)
     uint16_t len = ip_get_len(packet);
     *buff = malloc(len);
 
-    ip_hdr2chars(packet, *buff);
+    // header len in bytes
+    uint8_t  ihl_b       = ip_get_ihl(packet)*4;
+    uint32_t payload_len = ip_get_len(packet)-ihl_b;
+
+    memcpy(*buff, packet, ihl_b);
+    memcpy(*buff+ihl_b, packet->payload, payload_len);
+
+    return 0;
+}
+
+int ip_set_data(ip_packet_t *packet, unsigned char *data, int len)
+{
+    if(packet->payload)
+        free(packet->payload);
+
+    packet->payload = malloc(len);
+    memcpy(packet->payload, data, len);
+
+    uint16_t packet_len = len + ip_get_ihl(packet)*4;
+    ip_set_len(packet, packet_len);
+
+    return 0;
 }

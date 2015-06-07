@@ -43,6 +43,8 @@ void test_ip_build_packet()
 
     CU_ASSERT_EQUAL(dst_addr >>  24, 192);
     CU_ASSERT_EQUAL(dst_addr & 0xFF, 2);
+
+    CU_ASSERT_PTR_NULL(packet.payload);
 }
 
 void test_ip_packet2chars()
@@ -66,4 +68,32 @@ void test_ip_packet_len()
 
     ip_build_packet(&packet, src_ip, dst_ip);
     CU_ASSERT_EQUAL(ip_get_len(&packet), 20);
+}
+
+void test_ip_set_data()
+{
+    ip_packet_t packet;
+    unsigned char data[] = "hello world";
+
+    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_set_data(&packet, data, strlen(data));
+
+    CU_ASSERT_EQUAL(ip_get_len(&packet)-ip_get_ihl(&packet)*4, strlen(data));
+    CU_ASSERT_EQUAL(strncmp(data, packet.payload, strlen(data)), 0);
+}
+
+void test_ip_packet2chars_payload()
+{
+    ip_packet_t packet;
+    unsigned char data[] = "hello world";
+
+    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_set_data(&packet, data, strlen(data));
+
+    unsigned char *buff;
+    ip_packet2chars(&packet, &buff);
+
+    CU_ASSERT_EQUAL(buff[0], 0x45);
+    CU_ASSERT_EQUAL(buff[12], 192);
+    CU_ASSERT_EQUAL(buff[20], 'h');
 }

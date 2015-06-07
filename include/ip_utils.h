@@ -9,10 +9,12 @@
 #define ADDR_DST  4
 
 struct ip_packet {
-    uint32_t first;
-    uint32_t second;
-    uint32_t third;
-    uint32_t fourth;
+    uint8_t first[4];
+    uint8_t second[4];
+    uint8_t third[4];
+    uint8_t fourth[4];
+    uint8_t fifth[4];
+    uint8_t *payload;
 };
 
 typedef struct ip_packet ip_packet_t;
@@ -33,14 +35,10 @@ char* ip_hdr_get_addr_s(ip_packet_t*, int);
 int ip_build_packet(ip_packet_t *, char*, char*);
 void ip_hdr_set_common(ip_packet_t *);
 
-void set_octet(uint32_t *, uint8_t, uint8_t);
-uint8_t get_octet(uint32_t *, uint8_t);
-void set_double(uint32_t *, uint8_t, uint16_t);
-uint16_t get_double(uint32_t *, uint8_t);
-
 void ip_print_packet(ip_packet_t *);
 
 int ip_packet2chars(ip_packet_t *, unsigned char **);
-int ip_hdr2chars(ip_packet_t *, unsigned char*);
+// int ip_hdr2chars(ip_packet_t *, unsigned char*);
+int ip_set_data(ip_packet_t *, unsigned char*, int len);
 
 #endif

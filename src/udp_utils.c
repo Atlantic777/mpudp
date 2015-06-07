@@ -4,6 +4,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
+#include <stdlib.h>
 
 int udp_build_dgram_hdr(udp_dgram_t *dgram, uint16_t src, uint16_t dst)
 {
@@ -38,6 +40,46 @@ int udp_build_pseudo_hdr(udp_pseudo_hdr_t *pseudo, char *src_ip, char *dst_ip)
 
     uint16_t len = htons(8+12);
     memcpy(&pseudo->len, &len, 2);
+
+    return 0;
+}
+
+int udp_assign_pseudo_hdr(udp_dgram_t *dgram, udp_pseudo_hdr_t *pseudo)
+{
+    dgram->pseudo = pseudo;
+
+    memcpy(&dgram->len, pseudo->len, 2);
+    dgram->len = ntohs(dgram->len);
+
+    return 0;
+}
+
+int udp_pseudo2chars(udp_pseudo_hdr_t *pseudo, unsigned char *buff)
+{
+    memcpy(buff+8 , pseudo->src_ip, 4);
+    memcpy(buff+12, pseudo->dst_ip, 4);
+    memcpy(buff+16, &pseudo->padding, 1);
+    memcpy(buff+17, &pseudo->proto, 1);
+    memcpy(buff+18, pseudo->len, 2);
+
+    return 0;
+}
+
+int udp_dgram2chars(udp_dgram_t *dgram, unsigned char **buff)
+{
+    *buff = malloc(dgram->len);
+
+    uint16_t r_src = htonl(dgram->src_port);
+    uint16_t r_dst = htonl(dgram->dst_port);
+    uint16_t r_len = htonl(dgram->len);
+    uint16_t r_crc = htonl(dgram->crc);
+
+    memcpy(*buff+0, &r_src, 2);
+    memcpy(*buff+2, &r_dst, 2);
+    memcpy(*buff+4, &r_len, 2);
+    memcpy(*buff+6, &r_crc, 2);
+
+    udp_pseudo2chars(dgram->pseudo, *buff);
 
     return 0;
 }
