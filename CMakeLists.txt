@@ -5,6 +5,7 @@ project(mpudp)
 # global libs
 find_library(pcap pcap)
 find_library(cunit cunit)
+find_library(pthread pthread)
 include_directories(include)
 
 # common local libs
@@ -16,6 +17,9 @@ add_library(net_utils src/net_utils.c)
 add_library(pcap_utils src/pcap_utils.c)
 target_link_libraries(pcap_utils pcap)
 
+add_library(monitor src/mpudp_monitor.c)
+add_library(worker  src/mpudp_worker.c)
+add_library(mpudp_utils src/mpudp_utils.c)
 
 # client/server executables
 add_executable(mpudp src/main.c)
@@ -46,3 +50,5 @@ target_link_libraries(unit-test t_udp_utils t_ip_utils)
 # playground
 add_executable(playground tests/playground.c)
 target_link_libraries(playground eth_utils net_utils pcap pcap_utils ip_utils)
+target_link_libraries(playground pthread)
+target_link_libraries(playground monitor worker mpudp_utils)
