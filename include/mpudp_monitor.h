@@ -7,7 +7,8 @@ typedef struct monitor monitor_t;
 
 struct monitor {
     pthread_t    id;
-    mpudp_buff_t buff;
+    mpudp_buff_t tx_buff;
+    mpudp_buff_t rx_buff;
     int  pkt_counter;
 };
 

@@ -16,6 +16,7 @@ void* monitor_thread(void *arg)
 
 void init_monitor(monitor_t *m)
 {
-    init_buffer(&m->buff);
+    init_buffer(&m->tx_buff);
+    init_buffer(&m->rx_buff);
     m->pkt_counter = 0;
 }

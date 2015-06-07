@@ -11,7 +11,8 @@ struct worker {
     int id;
     pthread_t rx_thread_id;
     pthread_t tx_thread_id;
-    mpudp_buff_t buff;
+    mpudp_buff_t rx_buff;
+    mpudp_buff_t tx_buff;
     monitor_t *m;
     int choke;
 };

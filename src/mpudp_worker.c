@@ -5,7 +5,7 @@
 void* worker_tx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
-    mpudp_buff_t *buff = &w->m->buff;
+    mpudp_buff_t *buff = &w->m->tx_buff;
 
     while(1)
     {
@@ -29,14 +29,26 @@ void* worker_tx_thread(void *arg)
     }
 }
 
+void* worker_rx_thread(void *arg)
+{
+    worker_t *w = (worker_t*)arg;
+    mpudp_buff_t *buff = &w->m->rx_buff;
+
+    while(1)
+    {
+
+    }
+}
+
 worker_t* spawn_worker(int id, monitor_t *m, float choke)
 {
     worker_t *w = malloc(sizeof(worker_t));
-    init_buffer(&w->buff);
+    init_buffer(&w->tx_buff);
     w->m = m;
     w->choke = choke*1000000;
 
     pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
+    pthread_create(&w->rx_thread_id, NULL, &worker_rx_thread, w);
 
     return w;
 }
