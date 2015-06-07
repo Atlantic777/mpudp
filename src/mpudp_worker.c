@@ -34,10 +34,6 @@ void* worker_rx_thread(void *arg)
     worker_t *w = (worker_t*)arg;
     mpudp_buff_t *buff = &w->m->rx_buff;
 
-    while(1)
-    {
-
-    }
 }
 
 worker_t* spawn_worker(int id, monitor_t *m, float choke)
