@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#define BUFF_LEN 128
+#define BUFF_LEN 10
 
 
 typedef struct mpudp_buff mpudp_buff_t;

@@ -16,7 +16,9 @@ void* worker_thread(void *arg)
         buff->num--;
         pthread_mutex_unlock(&buff->mx);
 
-        sleep(5);
+        pthread_cond_signal(&buff->full);
+
+        sleep(1);
         puts("sending finished!");
     }
 }
