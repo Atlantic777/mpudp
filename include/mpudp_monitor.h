@@ -8,6 +8,7 @@ typedef struct monitor monitor_t;
 struct monitor {
     pthread_t    id;
     mpudp_buff_t buff;
+    int  pkt_counter;
 };
 
 void* monitor_thread(void*);

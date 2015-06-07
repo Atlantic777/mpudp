@@ -8,12 +8,15 @@
 typedef struct worker worker_t;
 
 struct worker {
-    pthread_t id;
+    int id;
+    pthread_t rx_thread_id;
+    pthread_t tx_thread_id;
     mpudp_buff_t buff;
     monitor_t *m;
+    int choke;
 };
 
-void* worker_thread(void *arg);
-void init_worker(worker_t *);
+void* worker_tx_thread(void *arg);
+worker_t* spawn_worker(int, monitor_t*, float);
 
 #endif

@@ -13,6 +13,7 @@ typedef struct mpudp_packet mpudp_packet_t;
 struct mpudp_packet {
     uint8_t *payload;
     int    len;
+    int    id;
 };
 
 struct mpudp_buff {

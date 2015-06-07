@@ -1,7 +1,8 @@
 #include "mpudp_worker.h"
 #include <stdio.h>
+#include <stdlib.h>
 
-void* worker_thread(void *arg)
+void* worker_tx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
     mpudp_buff_t *buff = &w->m->buff;
@@ -12,18 +13,30 @@ void* worker_thread(void *arg)
         while(buff->num <= 0)
             pthread_cond_wait(&buff->empty, &buff->mx);
 
-        printf("Worker %lu got it!\n", (unsigned long)w->id);
+        int id = buff->data[buff->tail]->id;
+
+
         buff->num--;
+        buff->tail =  (buff->tail + 1) % BUFF_LEN;
         pthread_mutex_unlock(&buff->mx);
 
         pthread_cond_signal(&buff->full);
 
-        sleep(1);
-        puts("sending finished!");
+        usleep(w->choke);
+
+        printf("Worker got it! Sending: %3d ", id);
+        printf("tail: %3d, head: %3d\n", buff->tail, buff->head);
     }
 }
 
-void init_worker(worker_t *w)
+worker_t* spawn_worker(int id, monitor_t *m, float choke)
 {
+    worker_t *w = malloc(sizeof(worker_t));
     init_buffer(&w->buff);
+    w->m = m;
+    w->choke = choke*1000000;
+
+    pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
+
+    return w;
 }
