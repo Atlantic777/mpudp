@@ -99,3 +99,16 @@ int udp_set_data(udp_dgram_t *dgram, uint8_t *data, int len)
 
     return 0;
 }
+
+int udp_read_dgram(udp_dgram_t *dgram, uint8_t *data, int len)
+{
+    dgram->src_port = data[0] << 8 | data[1];
+    dgram->dst_port = data[2] << 8 | data[3];
+    dgram->len      = data[4] << 8 | data[5];
+    dgram->crc      = data[6] << 8 | data[7];
+
+    dgram->data = malloc(dgram->len-8);
+    memcpy(dgram->data, data+8, dgram->len-8);
+
+    return 0;
+}

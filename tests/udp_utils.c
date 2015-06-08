@@ -109,5 +109,14 @@ void test_udp_dgram_len()
 
 void test_udp_read_dgram()
 {
-    CU_FAIL("Finish the test!");
+    udp_dgram_t *s_dgram = get_sample_dgram();
+
+    unsigned char *payload;
+    int udp_len = udp_dgram2chars(s_dgram, &payload);
+
+    udp_dgram_t r_dgram;
+    udp_read_dgram(&r_dgram, payload, udp_len);
+
+    CU_ASSERT_EQUAL(memcmp(&r_dgram, s_dgram, 8), 0);
+    CU_ASSERT_EQUAL(memcmp(r_dgram.data, s_dgram->data, s_dgram->len-8),0);
 }

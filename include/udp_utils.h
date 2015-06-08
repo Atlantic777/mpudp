@@ -31,5 +31,6 @@ int udp_build_dgram(udp_dgram_t *, uint16_t, uint16_t, char*, char*);
 int udp_build_pseudo_hdr(udp_pseudo_hdr_t *, char*, char*);
 int udp_dgram2chars(udp_dgram_t*, unsigned char**);
 int udp_set_data(udp_dgram_t*, uint8_t*, int);
+int udp_read_dgram(udp_dgram_t*, uint8_t*, int);
 
 #endif
