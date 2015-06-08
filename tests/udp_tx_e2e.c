@@ -11,7 +11,7 @@
 int main()
 {
 
-    char msg[] = "Hello world!\n";
+    char msg[] = "Hello world!";
 
     eth_frame_t eth_frame;
     ip_packet_t ip_packet;
@@ -31,7 +31,7 @@ int main()
 
     int udp_len, ip_len, eth_len;
 
-    eth_compile_frame(&eth_frame, dst_mac, src_mac, ETH_TYPE_IP);
+    eth_build_frame(&eth_frame, dst_mac, src_mac, ETH_TYPE_IP);
     ip_build_packet(&ip_packet, src_ip, dst_ip);
     udp_build_dgram_hdr(&dgram, src_port, dst_port);
 
