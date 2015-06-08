@@ -217,3 +217,15 @@ int ip_set_data(ip_packet_t *packet, unsigned char *data, int len)
 
     return 0;
 }
+
+int ip_read_packet(ip_packet_t *packet, unsigned char *data, int len)
+{
+    memcpy(packet->first, data, len);
+
+    int data_len = ip_get_len(packet)-20;
+
+    packet->payload = malloc(data_len);
+    memcpy(packet->payload, data+20, data_len);
+
+    return 0;
+}

@@ -40,6 +40,6 @@ void ip_print_packet(ip_packet_t *);
 
 int ip_packet2chars(ip_packet_t *, unsigned char **);
 int ip_set_data(ip_packet_t *, unsigned char*, int len);
-
+int ip_read_packet(ip_packet_t *, unsigned char*, int len);
 
 #endif

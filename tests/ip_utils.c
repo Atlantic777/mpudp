@@ -100,5 +100,17 @@ void test_ip_packet2chars_payload()
 
 void test_ip_read_packet()
 {
-    CU_FAIL("Finish the test!");
+    ip_packet_t s_packet, r_packet;
+    unsigned char data[] = "Hello world!";
+
+    ip_build_packet(&s_packet, t_ip_src_ip, t_ip_dst_ip);
+    ip_set_data(&s_packet, data, strlen(data));
+
+    unsigned char *payload;
+    int len = ip_packet2chars(&s_packet, &payload);
+
+    ip_read_packet(&r_packet, payload, len);
+
+    CU_ASSERT_EQUAL(ip_get_len(&s_packet), ip_get_len(&r_packet));
+    CU_ASSERT_EQUAL(memcmp(s_packet.payload, r_packet.payload, len-20), 0);
 }
