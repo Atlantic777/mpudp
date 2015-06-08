@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int eth_compile_frame(eth_frame_t *frame,
+int eth_build_frame(eth_frame_t *frame,
                       char *dst_mac,
                       char *src_mac,
                       unsigned char *eth_type)
@@ -51,4 +51,10 @@ int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
     memcpy(*buff+ETH_FRAME_PREFIX_LEN, frame->data, frame->data_len);
 
     return eth_frame_len(frame);
+}
+
+int eth_read_frame(eth_frame_t *frame, unsigned char **data, int len)
+{
+
+    return 0;
 }

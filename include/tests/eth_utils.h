@@ -13,4 +13,6 @@ void test_eth_frame2chars();
 void test_eth_frame_len();
 void test_eth_set_data();
 void test_eth_send_frame();
+void test_eth_read_frame();
+
 #endif

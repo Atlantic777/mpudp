@@ -13,7 +13,7 @@ typedef struct eth_frame {
     int data_len;
 } eth_frame_t;
 
-int eth_compile_frame(eth_frame_t*,
+int eth_build_frame(eth_frame_t*,
         char*,
         char*,
         unsigned char*);

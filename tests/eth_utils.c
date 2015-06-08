@@ -22,7 +22,7 @@ void prepare_empty_frame(eth_frame_t *frame)
     unsigned char dst_mac[] = SAMPLE_DST_MAC;
     unsigned char eth_type[] = {0x80, 0x00};
 
-    eth_compile_frame(frame, dst_mac, src_mac, eth_type);
+    eth_build_frame(frame, dst_mac, src_mac, eth_type);
 }
 
 void prepare_sample_frame(eth_frame_t *frame)
@@ -47,7 +47,7 @@ void test_eth_build_frame()
     unsigned char type[2] = {0x80, 0x00};
 
     eth_frame_t frame;
-    int res = eth_compile_frame(&frame, dst_mac_s, src_mac_s, type);
+    int res = eth_build_frame(&frame, dst_mac_s, src_mac_s, type);
 
     CU_ASSERT_EQUAL(res, 0);
     CU_ASSERT_EQUAL(memcmp(frame.src, src_mac, MAC_LEN), 0);
@@ -145,4 +145,12 @@ void test_eth_send_frame()
     // close everything
     free(dev);
     free(buff);
+}
+
+void test_eth_read_frame()
+{
+    eth_frame_t frame;
+
+
+    CU_FAIL("Finish the test!");
 }

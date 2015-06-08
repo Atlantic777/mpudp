@@ -81,7 +81,7 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     int eth_len, ip_len, udp_len;
 
-    eth_compile_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
+    eth_build_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
     ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
     udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
 
