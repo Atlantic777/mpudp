@@ -80,15 +80,19 @@ uint8_t ip_get_proto(ip_packet_t *packet)
 
 int ip_calculate_crc(ip_packet_t *packet)
 {
+    int _debug = 0;
+
     int i;
     packet->third[2] = 0;
     packet->third[3] = 0;
 
-    puts("raw");
-    for(i = 0; i < 20; i++)
-        printf("%02X ", *(packet->first+i));
+    if(_debug) {
+        puts("raw");
+        for(i = 0; i < 20; i++)
+            printf("%02X ", *(packet->first+i));
 
-    printf("\n");
+        printf("\n");
+    }
 
     // step 1
     uint16_t vals1[10];
@@ -103,9 +107,11 @@ int ip_calculate_crc(ip_packet_t *packet)
     vals1[8] = packet->fifth[0]  << 8 | packet->fifth[1];
     vals1[9] = packet->fifth[2]  << 8 | packet->fifth[3];
 
-    puts("vals1");
-    for(i = 0; i < 10; i++)
-        printf("%04X ", vals1[i]);
+    if(_debug) {
+        puts("vals1");
+        for(i = 0; i < 10; i++)
+            printf("%04X ", vals1[i]);
+    }
 
     uint32_t res1 = 0;
     for(i = 0; i < 10; i++)
@@ -120,16 +126,19 @@ int ip_calculate_crc(ip_packet_t *packet)
 
     // step 3
     uint16_t res3 = ~res2;
-    printf("\nFinal: %04X\n", res3);
+
+    if(_debug) printf("\nFinal: %04X\n", res3);
 
     packet->third[2] = res3 >> 8;
     packet->third[3] = res3  & 0xFF;
 
-    puts("after");
-    for(i = 0; i < 20; i++)
-        printf("%02X ", *(packet->first+i));
+    if(_debug) {
+        puts("after");
+        for(i = 0; i < 20; i++)
+            printf("%02X ", *(packet->first+i));
 
-    printf("\n\n");
+        printf("\n\n");
+    }
 }
 
 uint16_t ip_get_crc(ip_packet_t *packet)
