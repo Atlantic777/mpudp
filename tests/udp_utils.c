@@ -3,11 +3,11 @@
 #include "udp_utils.h"
 #include <stdint.h>
 
-uint16_t src_port = 2048;
-uint16_t dst_port = 8888;
+uint16_t t_udp_src_port = 2048;
+uint16_t t_udp_dst_port = 8888;
 
-char src_ip[] = "192.168.1.1";
-char dst_ip[] = "192.168.1.2";
+char t_udp_src_ip[] = "192.168.1.1";
+char t_udp_dst_ip[] = "192.168.1.2";
 
 int init_udp_utils()
 {
@@ -23,10 +23,10 @@ void test_udp_build_dgram_hdr()
 {
     udp_dgram_t dgram;
 
-    udp_build_dgram_hdr(&dgram, src_port, dst_port);
+    udp_build_dgram_hdr(&dgram, t_udp_src_port, t_udp_dst_port);
 
-    CU_ASSERT_EQUAL(dgram.src_port, src_port);
-    CU_ASSERT_EQUAL(dgram.dst_port, dst_port);
+    CU_ASSERT_EQUAL(dgram.src_port, t_udp_src_port);
+    CU_ASSERT_EQUAL(dgram.dst_port, t_udp_dst_port);
     CU_ASSERT_EQUAL(dgram.len, 8);
     CU_ASSERT_EQUAL(dgram.crc, 0);
     CU_ASSERT_PTR_NULL(dgram.data);
@@ -36,7 +36,7 @@ void test_udp_build_pseudo_hdr()
 {
     udp_pseudo_hdr_t pseudo_hdr;
 
-    udp_build_pseudo_hdr(&pseudo_hdr, src_ip, dst_ip);
+    udp_build_pseudo_hdr(&pseudo_hdr, t_udp_src_ip, t_udp_dst_ip);
 
     CU_ASSERT_EQUAL(pseudo_hdr.src_ip[0], 192);
     CU_ASSERT_EQUAL(pseudo_hdr.src_ip[3], 1);
@@ -51,7 +51,8 @@ void test_udp_build_dgram()
 {
     udp_dgram_t dgram;
 
-    udp_build_dgram(&dgram, src_port, dst_port, src_ip, dst_ip);
+    udp_build_dgram(&dgram, t_udp_src_port, t_udp_dst_port,
+                            t_udp_src_ip, t_udp_dst_ip);
 
 }
 

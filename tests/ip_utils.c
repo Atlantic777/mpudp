@@ -3,8 +3,8 @@
 #include "ip_utils.h"
 #include <stdio.h>
 
-char src_ip[] = "192.168.101.1";
-char dst_ip[] = "192.168.101.2";
+char t_ip_src_ip[] = "192.168.101.1";
+char t_ip_dst_ip[] = "192.168.101.2";
 
 int init_ip_utils()
 {
@@ -33,7 +33,7 @@ void test_ip_build_packet()
 {
     ip_packet_t packet;
 
-    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_build_packet(&packet, t_ip_src_ip, t_ip_dst_ip);
 
     uint32_t src_addr = ip_hdr_get_addr(&packet, ADDR_SRC);
     uint32_t dst_addr = ip_hdr_get_addr(&packet, ADDR_DST);
@@ -51,7 +51,7 @@ void test_ip_packet2chars()
 {
     ip_packet_t packet;
 
-    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_build_packet(&packet, t_ip_src_ip, t_ip_dst_ip);
 
     unsigned char *buff;
     ip_packet2chars(&packet, &buff);
@@ -66,7 +66,7 @@ void test_ip_packet_len()
 {
     ip_packet_t packet;
 
-    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_build_packet(&packet, t_ip_src_ip, t_ip_dst_ip);
     CU_ASSERT_EQUAL(ip_get_len(&packet), 20);
 }
 
@@ -75,7 +75,7 @@ void test_ip_set_data()
     ip_packet_t packet;
     unsigned char data[] = "hello world";
 
-    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_build_packet(&packet, t_ip_src_ip, t_ip_dst_ip);
     ip_set_data(&packet, data, strlen(data));
 
     CU_ASSERT_EQUAL(ip_get_len(&packet)-ip_get_ihl(&packet)*4, strlen(data));
@@ -87,7 +87,7 @@ void test_ip_packet2chars_payload()
     ip_packet_t packet;
     unsigned char data[] = "hello world";
 
-    ip_build_packet(&packet, src_ip, dst_ip);
+    ip_build_packet(&packet, t_ip_src_ip, t_ip_dst_ip);
     ip_set_data(&packet, data, strlen(data));
 
     unsigned char *buff;
