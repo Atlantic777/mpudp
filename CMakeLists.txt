@@ -70,3 +70,6 @@ add_executable(t_udp_tx_e2e tests/udp_tx_e2e.c)
 target_link_libraries(t_udp_tx_e2e pcap pcap_utils pthread)
 target_link_libraries(t_udp_tx_e2e monitor worker mpudp_utils)
 target_link_libraries(t_udp_tx_e2e ip_utils udp_utils eth_utils)
+
+add_executable(t_read_addr tests/read_addr.c)
+target_link_libraries(t_read_addr pcap_utils worker)

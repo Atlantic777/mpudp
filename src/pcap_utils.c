@@ -5,6 +5,8 @@
 #include <net_utils.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 int pcapu_find_any(pcap_if_t **dev)
 {
@@ -55,7 +57,7 @@ int pcapu_find_dev_by_name(pcap_if_t **dev, char *name)
 char* pcapu_read_if_mac_s(char *dev_name, char **mac_s)
 {
     char path[256];
-    char *addr = NULL;
+    char *addr = malloc(MAC_LEN_S);
     size_t n = MAC_LEN_S;
 
     sprintf(path, "%s%s/address", SYSFS_DEV_PATH, dev_name);
@@ -64,12 +66,33 @@ char* pcapu_read_if_mac_s(char *dev_name, char **mac_s)
     getline(&addr, &n, f);
     fclose(f);
 
+    addr[MAC_LEN_S-1] = 0;
+
     if(mac_s != NULL)
     {
         *mac_s = addr;
     }
 
     return addr;
+}
+
+char* pcapu_read_if_ip_s(pcap_if_t *if_desc, char **ip_s)
+{
+    pcap_addr_t *addr;
+    char *addr_s;
+
+    for(addr = if_desc->addresses; addr != NULL; addr = addr->next)
+    {
+        if(addr->addr->sa_family == AF_INET)
+        {
+            addr_s = inet_ntoa(((struct sockaddr_in*)addr->addr)->sin_addr);
+        }
+    }
+
+    if(ip_s != NULL)
+        *ip_s = addr_s;
+
+    return addr_s;
 }
 
 void check_root()
