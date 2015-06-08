@@ -53,8 +53,15 @@ int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
     return eth_frame_len(frame);
 }
 
-int eth_read_frame(eth_frame_t *frame, unsigned char **data, int len)
+int eth_read_frame(eth_frame_t *frame, unsigned char *data, int len)
 {
+    memcpy(frame->dst, data, MAC_LEN);
+    memcpy(frame->src, data+MAC_LEN, MAC_LEN);
+    memcpy(frame->type, data+2*MAC_LEN, 2);
+
+    frame->data_len = len-ETH_FRAME_PREFIX_LEN;
+    frame->data = malloc(frame->data_len);;
+    memcpy(frame->data, data+ETH_FRAME_PREFIX_LEN, frame->data_len);
 
     return 0;
 }

@@ -21,5 +21,6 @@ int eth_build_frame(eth_frame_t*,
 int eth_set_data(eth_frame_t*, unsigned char*, int);
 int eth_frame_len(eth_frame_t*);
 int eth_frame2chars(eth_frame_t *, unsigned char**);
+int eth_read_frame(eth_frame_t*, unsigned char*, int);
 
 #endif

@@ -149,8 +149,23 @@ void test_eth_send_frame()
 
 void test_eth_read_frame()
 {
-    eth_frame_t frame;
+    eth_frame_t s_frame, r_frame;
+    unsigned char *data;
+    int len, i;
 
+    prepare_sample_frame(&s_frame);
+    len = eth_frame2chars(&s_frame, &data);
 
-    CU_FAIL("Finish the test!");
+    eth_read_frame(&r_frame, data, len);
+
+    for(i = 0; i < MAC_LEN; i++)
+    {
+        CU_ASSERT_EQUAL(s_frame.src[i], r_frame.src[i]);
+        CU_ASSERT_EQUAL(s_frame.dst[i], r_frame.dst[i]);
+    }
+
+    for(i = 0; i < 2; i++)
+        CU_ASSERT_EQUAL(s_frame.type[i], r_frame.type[i])
+
+    CU_ASSERT_EQUAL(memcmp(s_frame.data, r_frame.data, s_frame.data_len), 0);
 }
