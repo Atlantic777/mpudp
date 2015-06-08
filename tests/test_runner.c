@@ -92,6 +92,8 @@ int main() {
                 test_udp_build_pseudo_hdr);
     CU_add_test(udp_utils_suite, "Build an UDP dgram",
                 test_udp_build_dgram);
+    CU_add_test(udp_utils_suite, "udp set data",
+                test_udp_set_data);
     CU_add_test(udp_utils_suite, "udp dgram to chars",
                 test_udp_dgram2chars);
     CU_add_test(udp_utils_suite, "udp dgram length",

@@ -2,6 +2,7 @@
 #include "tests/udp_utils.h"
 #include "udp_utils.h"
 #include <stdint.h>
+#include <stdlib.h>
 
 uint16_t t_udp_src_port = 2048;
 uint16_t t_udp_dst_port = 8888;
@@ -17,6 +18,21 @@ int init_udp_utils()
 int clean_udp_utils()
 {
     return 0;
+}
+
+udp_dgram_t* get_sample_dgram()
+{
+    udp_dgram_t *dgram = malloc(sizeof(udp_dgram_t));
+
+    udp_build_dgram(dgram, t_udp_src_port, t_udp_dst_port,
+                            t_udp_src_ip, t_udp_dst_ip);
+
+    unsigned char msg[] = "Hello world!";
+    int target_len = strlen(msg);
+
+    udp_set_data(dgram, msg, target_len);
+
+    return dgram;
 }
 
 void test_udp_build_dgram_hdr()
@@ -54,19 +70,41 @@ void test_udp_build_dgram()
     udp_build_dgram(&dgram, t_udp_src_port, t_udp_dst_port,
                             t_udp_src_ip, t_udp_dst_ip);
 
+    CU_ASSERT_EQUAL(dgram.src_port, t_udp_src_port);
+    CU_ASSERT_EQUAL(dgram.dst_port, t_udp_dst_port);
+}
+
+void test_udp_set_data()
+{
+    udp_dgram_t *dgram = get_sample_dgram();
+
+    unsigned char msg[] = "Hello world!";
+    int target_len = strlen(msg);
+
+    udp_set_data(dgram, msg, target_len);
+
+    CU_ASSERT_EQUAL(strncmp(msg, dgram->data, target_len), 0);
 }
 
 void test_udp_dgram2chars()
 {
-    // build whole dgram
-    // call 2 chars
-    // check it
-    CU_FAIL("Finish the test!");
+    udp_dgram_t *dgram = get_sample_dgram();
+
+    unsigned char *payload;
+    int udp_len = udp_dgram2chars(dgram, &payload);
+
+    CU_ASSERT_EQUAL(payload[0]<<8 | payload[1], t_udp_src_port);
+    CU_ASSERT_EQUAL(payload[2]<<8 | payload[3], t_udp_dst_port);
+    CU_ASSERT_EQUAL(memcmp(payload+8, dgram->data, dgram->len-8), 0);
 }
 
 void test_udp_dgram_len()
 {
-    CU_FAIL("Finish the test!");
+    udp_dgram_t *dgram = get_sample_dgram();
+
+    int target_len = strlen("Hello world!");
+
+    CU_ASSERT_EQUAL(target_len+8, dgram->len);
 }
 
 void test_udp_read_dgram()
