@@ -9,5 +9,6 @@ void test_udp_build_pseudo_hdr();
 void test_udp_build_dgram();
 void test_udp_dgram2chars();
 void test_udp_dgram_len();
+void test_udp_read_dgram();
 
 #endif

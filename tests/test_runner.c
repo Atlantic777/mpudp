@@ -48,6 +48,8 @@ int main() {
                 test_eth_set_data);
     CU_add_test(eth_utils_suite, "eth send an eth frame",
                 test_eth_send_frame);
+    CU_add_test(eth_utils_suite, "eth read frame",
+                test_eth_read_frame);
 
     /******* NET utils ******/
     CU_add_test(net_utils_suite, "Parse MAC addr and store to char array",
@@ -70,37 +72,32 @@ int main() {
     /******* IP utils ******/
     CU_add_test(ip_utils_suite, "Set common IP hdr values",
                 test_ip_set_common);
-
     CU_add_test(ip_utils_suite, "Build an IP packet",
                 test_ip_build_packet);
-
     CU_add_test(ip_utils_suite, "ip packet to chars",
                 test_ip_packet2chars);
-
     CU_add_test(ip_utils_suite, "ip packet len",
                 test_ip_packet_len);
-
     CU_add_test(ip_utils_suite, "IP set data",
                 test_ip_set_data);
-
     CU_add_test(ip_utils_suite, "IP packet to chars, with payload",
                 test_ip_packet2chars_payload);
+    CU_add_test(ip_utils_suite, "IP read packet",
+                test_ip_read_packet);
 
     /******* UDP utils ******/
     CU_add_test(udp_utils_suite, "Build an UDP dgram header",
                 test_udp_build_dgram_hdr);
-
     CU_add_test(udp_utils_suite, "Build an UDP dgram pseudo header",
                 test_udp_build_pseudo_hdr);
-
     CU_add_test(udp_utils_suite, "Build an UDP dgram",
                 test_udp_build_dgram);
-
     CU_add_test(udp_utils_suite, "udp dgram to chars",
                 test_udp_dgram2chars);
-
     CU_add_test(udp_utils_suite, "udp dgram length",
                 test_udp_dgram_len);
+    CU_add_test(udp_utils_suite, "udp read dgram",
+                test_udp_read_dgram);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

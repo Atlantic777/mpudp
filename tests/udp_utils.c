@@ -68,3 +68,8 @@ void test_udp_dgram_len()
 {
     CU_FAIL("Finish the test!");
 }
+
+void test_udp_read_dgram()
+{
+    CU_FAIL("Finish the test!");
+}

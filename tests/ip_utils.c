@@ -97,3 +97,8 @@ void test_ip_packet2chars_payload()
     CU_ASSERT_EQUAL(buff[12], 192);
     CU_ASSERT_EQUAL(buff[20], 'h');
 }
+
+void test_ip_read_packet()
+{
+    CU_FAIL("Finish the test!");
+}
