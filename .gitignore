@@ -9,3 +9,4 @@ unit-test
 *.pcap
 *.a
 tests/playground.c
+t_*
