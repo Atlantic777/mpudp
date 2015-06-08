@@ -31,7 +31,7 @@ void send_packet(uint8_t *data, int len, monitor_t *m)
 
 void fill_rx_buffer(monitor_t *m)
 {
-    mpudp_buff_t *buff = &m->rx_buffer;
+    mpudp_buff_t *buff = &m->rx_buff;
 
 }
 
@@ -43,9 +43,9 @@ int receive_packet(mpudp_packet_t *p, monitor_t *m)
 void dummy_send(monitor_t *m)
 {
     int i;
-    uint8_t data[] = "Hello world!";
+    uint8_t data[] = "Hello world!\n";
 
-    for(i = 0; i < 200; i++)
+    for(i = 0; i < 10; i++)
         send_packet(data, strlen(data), m);
 
     puts("user finished sending");

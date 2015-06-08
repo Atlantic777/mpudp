@@ -20,7 +20,12 @@ add_library(pcap_utils src/pcap_utils.c)
 target_link_libraries(pcap_utils pcap)
 
 add_library(monitor src/mpudp_monitor.c)
+
 add_library(worker  src/mpudp_worker.c)
+target_link_libraries(worker udp_utils ip_utils eth_utils)
+target_link_libraries(worker mpudp_utils pcap_utils)
+target_link_libraries(worker pcap)
+
 add_library(mpudp_utils src/mpudp_utils.c)
 
 # client/server executables
@@ -55,3 +60,8 @@ target_link_libraries(playground net_utils pcap pcap_utils)
 target_link_libraries(playground ip_utils udp_utils eth_utils)
 target_link_libraries(playground pthread)
 target_link_libraries(playground monitor worker mpudp_utils)
+
+# end to end tests
+add_executable(t_tx_test tests/tx_test.c)
+target_link_libraries(t_tx_test net_utils pcap pcap_utils pthread)
+target_link_libraries(t_tx_test monitor worker mpudp_utils)

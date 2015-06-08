@@ -86,8 +86,6 @@ int udp_dgram2chars(udp_dgram_t *dgram, unsigned char **buff)
 
     memcpy(*buff+8, dgram->data, dgram->len-8);
 
-    printf("inside fucking function %d\n", dgram->len);
-
     return dgram->len;
 }
 
