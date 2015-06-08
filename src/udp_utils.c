@@ -23,6 +23,11 @@ int udp_build_dgram(udp_dgram_t *dgram, uint16_t src_port, uint16_t dst_port,
 {
     udp_build_dgram_hdr(dgram, src_port, dst_port);
 
+    udp_pseudo_hdr_t pseudo;
+    udp_build_pseudo_hdr(&pseudo, src_ip, dst_ip);
+
+    udp_assign_pseudo_hdr(dgram, &pseudo);
+
     return 0;
 }
 
@@ -69,17 +74,30 @@ int udp_dgram2chars(udp_dgram_t *dgram, unsigned char **buff)
 {
     *buff = malloc(dgram->len);
 
-    uint16_t r_src = htonl(dgram->src_port);
-    uint16_t r_dst = htonl(dgram->dst_port);
-    uint16_t r_len = htonl(dgram->len);
-    uint16_t r_crc = htonl(dgram->crc);
+    uint16_t r_src = htons(dgram->src_port);
+    uint16_t r_dst = htons(dgram->dst_port);
+    uint16_t r_len = htons(dgram->len);
+    uint16_t r_crc = htons(dgram->crc);
 
     memcpy(*buff+0, &r_src, 2);
     memcpy(*buff+2, &r_dst, 2);
     memcpy(*buff+4, &r_len, 2);
     memcpy(*buff+6, &r_crc, 2);
 
-    udp_pseudo2chars(dgram->pseudo, *buff);
+    memcpy(*buff+8, dgram->data, dgram->len-8);
+
+    printf("inside fucking function %d\n", dgram->len);
+
+    return dgram->len;
+}
+
+int udp_set_data(udp_dgram_t *dgram, uint8_t *data, int len)
+{
+
+    dgram->len = len+8;
+    dgram->data = malloc(len);
+
+    memcpy(dgram->data, data, len);
 
     return 0;
 }

@@ -10,6 +10,8 @@ include_directories(include)
 
 # common local libs
 add_library(eth_utils src/eth_utils.c)
+target_link_libraries(eth_utils net_utils)
+
 add_library(ip_utils src/ip_utils.c)
 add_library(udp_utils src/udp_utils.c)
 
@@ -49,6 +51,7 @@ target_link_libraries(unit-test t_udp_utils t_ip_utils)
 
 # playground
 add_executable(playground tests/playground.c)
-target_link_libraries(playground eth_utils net_utils pcap pcap_utils ip_utils)
+target_link_libraries(playground net_utils pcap pcap_utils)
+target_link_libraries(playground ip_utils udp_utils eth_utils)
 target_link_libraries(playground pthread)
 target_link_libraries(playground monitor worker mpudp_utils)

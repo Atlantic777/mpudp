@@ -50,5 +50,5 @@ int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
     memcpy(*buff+2*MAC_LEN, frame->type, 2);
     memcpy(*buff+ETH_FRAME_PREFIX_LEN, frame->data, frame->data_len);
 
-
+    return eth_frame_len(frame);
 }

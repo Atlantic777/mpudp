@@ -34,11 +34,12 @@ char* ip_hdr_get_addr_s(ip_packet_t*, int);
 
 int ip_build_packet(ip_packet_t *, char*, char*);
 void ip_hdr_set_common(ip_packet_t *);
+int ip_calculate_crc(ip_packet_t*);
 
 void ip_print_packet(ip_packet_t *);
 
 int ip_packet2chars(ip_packet_t *, unsigned char **);
-// int ip_hdr2chars(ip_packet_t *, unsigned char*);
 int ip_set_data(ip_packet_t *, unsigned char*, int len);
+
 
 #endif
