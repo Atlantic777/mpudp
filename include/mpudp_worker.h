@@ -6,6 +6,9 @@
 #include "mpudp_monitor.h"
 #include <pcap.h>
 
+#define WORKER_NOT_CONNECTED 0
+#define WORKER_CONNECTED     1
+
 typedef struct worker worker_t;
 
 struct worker {
@@ -24,6 +27,7 @@ struct worker {
     char *dst_mac;
     pcap_t    *if_handle;
     pcap_if_t *if_desc;
+    uint8_t state;
 };
 
 void* worker_tx_thread(void *arg);

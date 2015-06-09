@@ -32,7 +32,7 @@ void* worker_tx_thread(void *arg)
             pthread_mutex_unlock(&m->tx_mx);
             pthread_cond_broadcast(&m->bcast_done);
         }
-        else
+        else if(w->state == WORKER_CONNECTED)
         {
             int id = m->tx_data[m->tx_tail]->id;
 
@@ -51,6 +51,10 @@ void* worker_tx_thread(void *arg)
 
             printf("Worker %d got it! Sending: %3d ", w->id, id);
             printf("tail: %3d, head: %3d num: %3d\n", m->tx_tail, m->tx_head, m->tx_num);
+        }
+        else
+        {
+            pthread_mutex_unlock(&m->tx_mx);
         }
     }
 }
@@ -86,6 +90,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     char errbuf[PCAP_ERRBUF_SIZE];
 
     w->if_handle = pcap_open_live(w->if_desc->name, 1024, 1, 1000, errbuf);
+    w->state = WORKER_NOT_CONNECTED;
 
     return w;
 }
