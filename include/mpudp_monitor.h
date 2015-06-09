@@ -49,7 +49,6 @@ struct monitor {
 
 void* monitor_thread(void*);
 void init_monitor(monitor_t *);
-void init_bcast_buff(monitor_t*);
 void bcast_push(monitor_t*, mpudp_packet_t*);
 int bcast_empty(monitor_t*);
 

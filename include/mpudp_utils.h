@@ -27,5 +27,6 @@ struct mpudp_buff {
     pthread_mutex_t mx;
 };
 
+int mpudp_prepare_packet(mpudp_packet_t**, uint8_t*, int);
 
 #endif

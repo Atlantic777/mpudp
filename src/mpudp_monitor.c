@@ -51,13 +51,7 @@ void* monitor_thread(void *arg)
         m->checkin[i] = 1;
 
     char bcast_msg[] = "Goodbye sad world!";
-
-    m->bcast_data = malloc(sizeof(mpudp_packet_t));
-    m->bcast_data->id = -1;
-    m->bcast_data->payload = malloc(strlen(bcast_msg));
-    strncpy(m->bcast_data->payload, bcast_msg, strlen(bcast_msg));
-    m->bcast_data->len = strlen(bcast_msg);
-
+    mpudp_prepare_packet(&m->bcast_data, bcast_msg, strlen(bcast_msg));
 
     // release the lock
     pthread_mutex_unlock(&m->bcast_mx);
@@ -100,11 +94,6 @@ void init_monitor(monitor_t *m)
     // monitor specific
     m->pkt_counter = 0;
     m->num_workers = 0;
-}
-
-void init_bcast_buff(monitor_t *m)
-{
-
 }
 
 int bcast_empty(monitor_t *m)
