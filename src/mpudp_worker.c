@@ -6,6 +6,7 @@
 #include "udp_utils.h"
 #include "pcap_utils.h"
 #include <pcap.h>
+#include <string.h>
 
 void* worker_tx_thread(void *arg)
 {
@@ -34,8 +35,8 @@ void* worker_tx_thread(void *arg)
         worker_send_packet(w, tmp);
         free(tmp);
 
-        /* printf("Worker got it! Sending: %3d ", id); */
-        /* printf("tail: %3d, head: %3d\n", buff->tail, buff->head); */
+        printf("Worker %d got it! Sending: %3d ", w->id, id);
+        printf("tail: %3d, head: %3d\n", buff->tail, buff->head);
     }
 }
 
@@ -46,29 +47,38 @@ void* worker_rx_thread(void *arg)
 
 }
 
-worker_t* spawn_worker(int id, monitor_t *m, float choke)
+worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 {
     worker_t *w = malloc(sizeof(worker_t));
     init_buffer(&w->tx_buff);
     w->m = m;
+    w->id = id;
     w->choke = choke*1000000;
 
+    char *tmp;
+
+    pcapu_find_dev_by_name(&w->if_desc, iface_name);
+
     w->src_port = 6666;
-    w->dst_port = 8888;
-    w->src_ip = "192.168.101.1";
-    w->dst_ip = "192.168.101.2";
-    w->src_mac = "74:e5:0b:85:88:8a";
-    w->dst_mac = "00:0f:13:97:11:fa";
+    tmp = pcapu_read_if_mac_s(w->if_desc->name, NULL);
+    w->src_mac = malloc(strlen(tmp)+1);
+    strcpy(w->src_mac, tmp);
+
+    tmp = pcapu_read_if_ip_s(w->if_desc, NULL);
+    w->src_ip = malloc(strlen(tmp)+1);
+    strcpy(w->src_ip, tmp);
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    pcapu_find_dev_by_name(&w->if_desc, "wlan2");
     w->if_handle = pcap_open_live(w->if_desc->name, 1024, 1, 1000, errbuf);
 
+    return w;
+}
+
+int spawn_worker(worker_t *w)
+{
     pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
     pthread_create(&w->rx_thread_id, NULL, &worker_rx_thread, w);
-
-    return w;
 }
 
 int worker_send_packet(worker_t *w, mpudp_packet_t *p)

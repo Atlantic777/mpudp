@@ -27,7 +27,8 @@ struct worker {
 };
 
 void* worker_tx_thread(void *arg);
-worker_t* spawn_worker(int, monitor_t*, float);
+worker_t* init_worker(int, char*, monitor_t*, float);
+int spawn_worker(worker_t* spawn_worker);
 int worker_send_packet(worker_t*, mpudp_packet_t*);
 
 #endif
