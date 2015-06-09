@@ -39,25 +39,10 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         spawn_worker(workers[i]);
 
-
-    // send a broadcast
-    // acquaire the lock
-    pthread_mutex_lock(&m->bcast_mx);
-    while(bcast_empty(m) == 0)
-        pthread_cond_wait(&m->bcast_done, &m->bcast_mx);
-
-    // fill the data
-    for(i = 0; i < m->num_workers; i++)
-        m->checkin[i] = 1;
-
     char bcast_msg[] = "Goodbye sad world!";
-    mpudp_prepare_packet(&m->bcast_data, bcast_msg, strlen(bcast_msg));
-
-    // release the lock
-    pthread_mutex_unlock(&m->bcast_mx);
-
-    // notify workers of new bcast data
-    pthread_cond_broadcast(&m->tx_has_data);
+    mpudp_packet_t *bcast_packet;
+    mpudp_prepare_packet(&bcast_packet, bcast_msg, strlen(bcast_msg));
+    bcast_push(m, bcast_packet);
 
     for(i = 0; i < num_ifaces; i++)
         pthread_join(workers[i]->tx_thread_id, NULL);
@@ -105,4 +90,20 @@ int bcast_empty(monitor_t *m)
         sum += m->checkin[i];
 
     return sum == 0;
+}
+
+void bcast_push(monitor_t *m, mpudp_packet_t *p)
+{
+    pthread_mutex_lock(&m->bcast_mx);
+    while(bcast_empty(m) == 0)
+        pthread_cond_wait(&m->bcast_done, &m->bcast_mx);
+
+    int i;
+    for(i = 0; i < m->num_workers; i++)
+        m->checkin[i] = 1;
+
+    m->bcast_data = p;
+
+    pthread_mutex_unlock(&m->bcast_mx);
+    pthread_cond_broadcast(&m->tx_has_data);
 }
