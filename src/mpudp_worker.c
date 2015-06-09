@@ -14,32 +14,44 @@ void* worker_tx_thread(void *arg)
     monitor_t *m = w->m;
     mpudp_packet_t *tmp; // worker's tx buffer
 
+
     while(1)
     {
         pthread_mutex_lock(&m->tx_mx);
 
-        while(m->tx_num <= 0)
+        while(m->tx_num <= 0 && m->checkin[w->id] == 0)
+        {
             pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
+        }
 
+        if(m->checkin[w->id] == 1)
+        {
+            printf("It's broadcast! %d\n", w->id);
+            m->checkin[w->id] = 0;
 
-        int id = m->tx_data[m->tx_tail]->id;
+            pthread_mutex_unlock(&m->tx_mx);
+            pthread_cond_broadcast(&m->bcast_done);
+        }
+        else
+        {
+            int id = m->tx_data[m->tx_tail]->id;
 
+            tmp = m->tx_data[m->tx_tail];
 
-        tmp = m->tx_data[m->tx_tail];
+            m->tx_num--;
+            m->tx_tail =  (m->tx_tail + 1) % BUFF_LEN;
 
-        m->tx_num--;
-        m->tx_tail =  (m->tx_tail + 1) % BUFF_LEN;
-        pthread_mutex_unlock(&m->tx_mx);
+            pthread_mutex_unlock(&m->tx_mx);
+            pthread_cond_signal(&m->tx_not_full);
 
-        pthread_cond_signal(&m->tx_not_full);
+            usleep(w->choke);
 
-        usleep(w->choke);
+            worker_send_packet(w, tmp);
+            free(tmp);
 
-        worker_send_packet(w, tmp);
-        free(tmp);
-
-        printf("Worker %d got it! Sending: %3d ", w->id, id);
-        printf("tail: %3d, head: %3d num: %3d\n", m->tx_tail, m->tx_head, m->tx_num);
+            printf("Worker %d got it! Sending: %3d ", w->id, id);
+            printf("tail: %3d, head: %3d num: %3d\n", m->tx_tail, m->tx_head, m->tx_num);
+        }
     }
 }
 
