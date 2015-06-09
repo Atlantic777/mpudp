@@ -11,24 +11,27 @@
 void* worker_tx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
-    mpudp_buff_t *buff = &w->m->tx_buff;
-    mpudp_packet_t *tmp;
+    monitor_t *m = w->m;
+    mpudp_packet_t *tmp; // worker's tx buffer
 
     while(1)
     {
-        pthread_mutex_lock(&buff->mx);
-        while(buff->num <= 0)
-            pthread_cond_wait(&buff->empty, &buff->mx);
+        pthread_mutex_lock(&m->tx_mx);
 
-        int id = buff->data[buff->tail]->id;
+        while(m->tx_num <= 0)
+            pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
 
-        tmp = buff->data[buff->tail];
 
-        buff->num--;
-        buff->tail =  (buff->tail + 1) % BUFF_LEN;
-        pthread_mutex_unlock(&buff->mx);
+        int id = m->tx_data[m->tx_tail]->id;
 
-        pthread_cond_signal(&buff->full);
+
+        tmp = m->tx_data[m->tx_tail];
+
+        m->tx_num--;
+        m->tx_tail =  (m->tx_tail + 1) % BUFF_LEN;
+        pthread_mutex_unlock(&m->tx_mx);
+
+        pthread_cond_signal(&m->tx_not_full);
 
         usleep(w->choke);
 
@@ -36,14 +39,14 @@ void* worker_tx_thread(void *arg)
         free(tmp);
 
         printf("Worker %d got it! Sending: %3d ", w->id, id);
-        printf("tail: %3d, head: %3d\n", buff->tail, buff->head);
+        printf("tail: %3d, head: %3d num: %3d\n", m->tx_tail, m->tx_head, m->tx_num);
     }
 }
 
 void* worker_rx_thread(void *arg)
 {
-    worker_t *w = (worker_t*)arg;
-    mpudp_buff_t *buff = &w->m->rx_buff;
+    /* worker_t *w = (worker_t*)arg; */
+    /* mpudp_buff_t *buff = &w->m->rx_buff; */
 
 }
 

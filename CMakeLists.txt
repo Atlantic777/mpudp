@@ -20,6 +20,7 @@ add_library(pcap_utils src/pcap_utils.c)
 target_link_libraries(pcap_utils pcap)
 
 add_library(monitor src/mpudp_monitor.c)
+target_link_libraries(monitor pcap_utils worker)
 
 add_library(worker  src/mpudp_worker.c)
 target_link_libraries(worker udp_utils ip_utils eth_utils)
@@ -73,3 +74,6 @@ target_link_libraries(t_udp_tx_e2e ip_utils udp_utils eth_utils)
 
 add_executable(t_read_addr tests/read_addr.c)
 target_link_libraries(t_read_addr pcap_utils worker)
+
+add_executable(t_worker_init tests/worker_init.c)
+target_link_libraries(t_worker_init pthread monitor)
