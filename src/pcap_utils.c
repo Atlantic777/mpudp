@@ -95,6 +95,31 @@ char* pcapu_read_if_ip_s(pcap_if_t *if_desc, char **ip_s)
     return addr_s;
 }
 
+char* pcapu_read_if_bcast_s(pcap_if_t *if_desc, char **bcast_s)
+{
+    pcap_addr_t *addr;
+    char *addr_s;
+
+    for(addr = if_desc->addresses; addr != NULL; addr = addr->next)
+    {
+        if(addr->addr->sa_family == AF_INET)
+        {
+            struct in_addr a = ((struct sockaddr_in*)addr->addr)->sin_addr;
+            uint32_t *b = (uint32_t*)&a;
+
+            *b = *b | 0xFF << 24;
+
+            addr_s = inet_ntoa(a);
+        }
+    }
+
+    if(bcast_s != NULL)
+        *bcast_s = addr_s;
+
+    return addr_s;
+
+}
+
 void check_root()
 {
     if(getuid() != 0)

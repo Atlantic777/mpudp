@@ -29,8 +29,13 @@ void* worker_tx_thread(void *arg)
             printf("It's broadcast! %d\n", w->id);
             m->checkin[w->id] = 0;
 
+            tmp = m->bcast_data;
+
             pthread_mutex_unlock(&m->tx_mx);
             pthread_cond_broadcast(&m->bcast_done);
+
+            worker_send_bcast(w, tmp);
+            usleep(w->choke);
         }
         else if(w->state == WORKER_CONNECTED)
         {
@@ -79,13 +84,25 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     pcapu_find_dev_by_name(&w->if_desc, iface_name);
 
     w->src_port = 6666;
+    w->dst_port = 8880 + w->id;
+
     tmp = pcapu_read_if_mac_s(w->if_desc->name, NULL);
     w->src_mac = malloc(strlen(tmp)+1);
     strcpy(w->src_mac, tmp);
 
+    w->bcast_mac = malloc(MAC_LEN_S);
+    strcpy(w->bcast_mac, BCAST_MAC_S);
+
     tmp = pcapu_read_if_ip_s(w->if_desc, NULL);
     w->src_ip = malloc(strlen(tmp)+1);
     strcpy(w->src_ip, tmp);
+
+    tmp = pcapu_read_if_bcast_s(w->if_desc, NULL);
+    w->bcast_ip = malloc(strlen(tmp)+1);
+    strcpy(w->bcast_ip, tmp);
+
+    w->bcast_mac = malloc(MAC_LEN_S);
+    strcpy(w->bcast_mac, BCAST_MAC_S);
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -123,6 +140,40 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     eth_set_data(&eth_frame, ip_payload, ip_len);
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
+
+    /* printf("UDP: %d\n", udp_len); */
+    /* printf("IP : %d\n", ip_len); */
+    /* printf("ETH: %d\n", eth_len); */
+
+    pcap_sendpacket(w->if_handle, eth_payload, eth_len);
+
+    return 0;
+}
+
+int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
+{
+    eth_frame_t eth_frame;
+    ip_packet_t ip_packet;
+    udp_dgram_t udp_dgram;
+
+    unsigned char *eth_payload, *ip_payload, *udp_payload;
+
+    int eth_len, ip_len, udp_len;
+
+    eth_build_frame(&eth_frame, w->bcast_mac, w->src_mac, ETH_TYPE_IP);
+    ip_build_packet(&ip_packet, w->src_ip, w->bcast_ip);
+    udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
+
+    udp_set_data(&udp_dgram, p->payload, p->len);
+    udp_len = udp_dgram2chars(&udp_dgram, &udp_payload);
+
+    ip_set_data(&ip_packet, udp_payload, udp_len);
+    ip_len = ip_packet2chars(&ip_packet, &ip_payload);
+
+
+    eth_set_data(&eth_frame, ip_payload, ip_len);
+    eth_len = eth_frame2chars(&eth_frame, &eth_payload);
+
 
     /* printf("UDP: %d\n", udp_len); */
     /* printf("IP : %d\n", ip_len); */

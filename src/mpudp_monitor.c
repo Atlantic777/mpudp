@@ -18,18 +18,6 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         workers[i] = init_worker(i, iface_names_list[i], m, 0.5*i+1);
 
-    workers[0]->dst_mac = "FF:FF:FF:FF:FF";
-    workers[1]->dst_mac = "FF:FF:FF:FF:FF";
-
-    workers[0]->dst_ip = "192.168.101.255";
-    workers[1]->dst_ip = "192.168.102.255";
-
-    workers[0]->src_port = 6660;
-    workers[1]->src_port = 6661;
-
-    workers[0]->dst_port = 8880;
-    workers[1]->dst_port = 8881;
-
     m->num_workers = num_ifaces;
     m->checkin = malloc(sizeof(int)*m->num_workers);
 

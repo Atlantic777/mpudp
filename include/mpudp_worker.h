@@ -25,6 +25,8 @@ struct worker {
     uint16_t dst_port;
     char *src_mac;
     char *dst_mac;
+    char *bcast_mac;
+    char *bcast_ip;
     pcap_t    *if_handle;
     pcap_if_t *if_desc;
     uint8_t state;
@@ -34,5 +36,6 @@ void* worker_tx_thread(void *arg);
 worker_t* init_worker(int, char*, monitor_t*, float);
 int spawn_worker(worker_t* spawn_worker);
 int worker_send_packet(worker_t*, mpudp_packet_t*);
+int worker_send_bcast(worker_t*, mpudp_packet_t*);
 
 #endif

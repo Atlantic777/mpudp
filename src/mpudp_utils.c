@@ -24,5 +24,6 @@ int mpudp_prepare_packet(mpudp_packet_t **packet, uint8_t *data, int len)
     p->id = -1;
     p->payload = malloc(len);
     memcpy(p->payload, data, len);
+    p->len = len;
     return len;
 }

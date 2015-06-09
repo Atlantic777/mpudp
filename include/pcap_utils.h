@@ -10,6 +10,7 @@ int pcapu_find_dev_by_name(pcap_if_t **, char*);
 int pcapu_find_all_devs(char***);
 char* pcapu_read_if_mac_s(char *, char **);
 char* pcapu_read_if_ip_s(pcap_if_t*, char **);
+char* pcapu_read_if_bcast_s(pcap_if_t*, char**);
 void check_root();
 void pcapu_print_all_devs();
 
