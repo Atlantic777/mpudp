@@ -66,8 +66,25 @@ void* worker_tx_thread(void *arg)
 
 void* worker_rx_thread(void *arg)
 {
-    /* worker_t *w = (worker_t*)arg; */
-    /* mpudp_buff_t *buff = &w->m->rx_buff; */
+    worker_t *w = (worker_t*)arg;
+    monitor_t *m = w->m;
+    mpudp_packet_t *tmp;
+
+    struct pcap_pkthdr *pkt_header;
+    const u_char *pkt_data;
+
+    while(1)
+    {
+        if(pcap_next_ex(w->if_handle, &pkt_header, &pkt_data))
+        {
+            /* puts("Got the packet..."); */
+            printf("Got the packet: %02X\n", pkt_data[0]);
+        }
+        else
+        {
+            puts("No data... :(");
+        }
+    }
 
 }
 
@@ -106,7 +123,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 1, 1000, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 1000, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     return w;
