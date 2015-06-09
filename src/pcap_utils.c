@@ -116,3 +116,28 @@ void pcapu_print_all_devs()
         puts(d->name);
     }
 }
+
+int pcapu_find_all_devs(char ***dev_arr)
+{
+    pcap_if_t *alldevs, *d;
+    char eb[PCAP_ERRBUF_SIZE];
+
+    int cursor = 0;
+
+    *dev_arr = malloc(sizeof(char*)*3);
+    char **tmp = (char**)*dev_arr;
+
+    pcap_findalldevs(&alldevs, eb);
+
+    for(d = alldevs; d != NULL; d = d->next)
+    {
+        if(strstr(d->name, "wlan") && d->name[4] > '0')
+        {
+            tmp[cursor] = malloc(5);
+            strcpy(tmp[cursor], d->name);
+            cursor++;
+        }
+    }
+
+    return cursor;
+}
