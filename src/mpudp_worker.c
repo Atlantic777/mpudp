@@ -14,7 +14,6 @@ void* worker_tx_thread(void *arg)
     monitor_t *m = w->m;
     mpudp_packet_t *tmp; // worker's tx buffer
 
-
     while(1)
     {
         pthread_mutex_lock(&m->tx_mx);
@@ -70,11 +69,12 @@ void* worker_rx_thread(void *arg)
     monitor_t *m = w->m;
     mpudp_packet_t *tmp;
 
+
     while(1)
     {
         if(worker_recv_packet(w, tmp))
         {
-            printf("Got the packet.");
+            printf("Got the packet.\n");
 
             // decode packet
             // if it's config, push new config to the monitor
@@ -91,11 +91,13 @@ void* worker_rx_thread(void *arg)
 
 worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 {
+    puts("here!");
     worker_t *w = malloc(sizeof(worker_t));
     init_buffer(&w->tx_buff);
     w->m = m;
     w->id = id;
     w->choke = choke*1000000;
+
 
     char *tmp;
 
@@ -141,7 +143,31 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     struct pcap_pkthdr *pkt_header;
     const u_char *pkt_data;
 
-    return pcap_next_ex(w->if_handle, &pkt_header, &pkt_data);
+    int res = pcap_next_ex(w->if_handle, &pkt_header, &pkt_data);
+
+    if(res != 1)
+        return 0;
+
+    eth_frame_t frame;
+    eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->caplen);
+
+    char mac_s[MAC_LEN_S];
+    puts(chars2mac(frame.src, mac_s));
+    puts(chars2mac(frame.dst, mac_s));
+
+    if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
+    {
+        puts("We got a broadcast!");
+    }
+    else if(memcmp(frame.dst, w->src_mac, MAC_LEN) == 0)
+    {
+        puts("The frame is for us...");
+    }
+    else
+    {
+        return 1;
+    }
+
 }
 
 int worker_send_packet(worker_t *w, mpudp_packet_t *p)

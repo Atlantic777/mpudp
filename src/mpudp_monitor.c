@@ -27,6 +27,7 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         spawn_worker(workers[i]);
 
+
     // spawn config monitoring thread
     pthread_create(&m->config_announcer_id, NULL, monitor_config_announcer, m);
 
@@ -53,7 +54,7 @@ void* monitor_config_announcer(void *arg)
     while(1)
     {
         bcast_push(m, bcast_packet);
-        sleep(1);
+        sleep(5);
     }
 
 }
