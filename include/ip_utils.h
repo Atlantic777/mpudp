@@ -7,6 +7,7 @@
 #define PROTO_UDP 0x11
 #define ADDR_SRC  3
 #define ADDR_DST  4
+#define IP_HDR_LEN 20
 
 struct ip_packet {
     uint8_t first[4];
@@ -30,7 +31,7 @@ uint16_t ip_get_crc(ip_packet_t *);
 uint16_t ip_get_len(ip_packet_t *);
 uint16_t ip_set_len(ip_packet_t *, uint16_t);
 
-char* ip_hdr_get_addr_s(ip_packet_t*, int);
+char* ip_hdr_get_addr_s(ip_packet_t*, uint8_t);
 
 int ip_build_packet(ip_packet_t *, char*, char*);
 void ip_hdr_set_common(ip_packet_t *);

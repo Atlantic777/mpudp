@@ -28,7 +28,7 @@ void ip_hdr_set_common(ip_packet_t *packet)
     packet->first[1] = 0;
 
     // set initial total length just to header len (in bytes)
-    ip_set_len(packet, 20);
+    ip_set_len(packet, IP_HDR_LEN);
 
     // set id, fragment num and fragmentation bits to 0
     memset(packet->second, 0, 4);
@@ -88,7 +88,7 @@ int ip_calculate_crc(ip_packet_t *packet)
 
     if(_debug) {
         puts("raw");
-        for(i = 0; i < 20; i++)
+        for(i = 0; i < IP_HDR_LEN; i++)
             printf("%02X ", *(packet->first+i));
 
         printf("\n");
@@ -134,7 +134,7 @@ int ip_calculate_crc(ip_packet_t *packet)
 
     if(_debug) {
         puts("after");
-        for(i = 0; i < 20; i++)
+        for(i = 0; i < IP_HDR_LEN; i++)
             printf("%02X ", *(packet->first+i));
 
         printf("\n\n");
@@ -165,7 +165,7 @@ uint32_t ip_hdr_get_addr(ip_packet_t *packet, int way)
     return res;
 }
 
-char* ip_hdr_get_addr_s(ip_packet_t *packet, int way)
+char* ip_hdr_get_addr_s(ip_packet_t *packet, uint8_t way)
 {
     struct in_addr addr;
     uint32_t my_addr = ip_hdr_get_addr(packet, way);
@@ -220,12 +220,12 @@ int ip_set_data(ip_packet_t *packet, unsigned char *data, int len)
 
 int ip_read_packet(ip_packet_t *packet, unsigned char *data, int len)
 {
-    memcpy(packet->first, data, len);
+    memcpy(packet->first, data, IP_HDR_LEN);
 
-    int data_len = ip_get_len(packet)-20;
+    int data_len = ip_get_len(packet)-IP_HDR_LEN;
 
     packet->payload = malloc(data_len);
-    memcpy(packet->payload, data+20, data_len);
+    memcpy(packet->payload, data+IP_HDR_LEN, data_len);
 
     return 0;
 }
