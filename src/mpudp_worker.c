@@ -25,7 +25,7 @@ void* worker_tx_thread(void *arg)
 
         if(m->checkin[w->id] == 1)
         {
-            printf("It's broadcast! %d\n", w->id);
+            printf("[%2d] - It's broadcast!\n", w->id);
             m->checkin[w->id] = 0;
 
             tmp = m->bcast_data;
@@ -74,7 +74,7 @@ void* worker_rx_thread(void *arg)
     {
         if(worker_recv_packet(w, tmp))
         {
-            printf("Got the packet.\n");
+            printf("[%2d] - Got the packet.\n", w->id);
 
             // decode packet
             // if it's config, push new config to the monitor
@@ -149,19 +149,48 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         return 0;
 
     eth_frame_t frame;
-    eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->caplen);
+    eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->len);
 
-    char mac_s[MAC_LEN_S];
-    puts(chars2mac(frame.src, mac_s));
-    puts(chars2mac(frame.dst, mac_s));
+    /* char mac_s[MAC_LEN_S]; */
+    /* puts(chars2mac(frame.src, mac_s)); */
+    /* puts(chars2mac(frame.dst, mac_s)); */
 
     if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
     {
-        puts("We got a broadcast!");
+        printf("[%2d] - We got a broadcast!\n", w->id);
+        // continue decoding ip_packet_t and mpudp_packet_t
+        //
+        ip_packet_t ip_packet;
+        ip_read_packet(&ip_packet, frame.data, frame.data_len);
+
+        puts(ip_hdr_get_addr_s(&ip_packet, ADDR_SRC));
+        puts(ip_hdr_get_addr_s(&ip_packet, ADDR_DST));
+
+        udp_dgram_t udp_dgram;
+        udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
+
+        printf("[%2d] - UDP payload is %s\n", w->id, udp_dgram.data);
+
+        // if the mpudp_packet_t payload is a config
+        // if it's not, just drop it
+        // obtain lock to the monitor's remote config storage
+        // check the version of the config there, and if it's newer
+        // push this one and notify monitor thread of the new config
+        // else, just release the lock and drop the packet
     }
     else if(memcmp(frame.dst, w->src_mac, MAC_LEN) == 0)
     {
         puts("The frame is for us...");
+        // continue decoding ip_packet and mpudp_packet
+        // if packet is ACK, check our buffer, confirm ACK
+        // and remove that packet from ACK waiting list
+        // if ACK is not for our packet, just drop it
+        // other variant is that this is user data
+        // if it's user data, push ACK packet to the TX buffer
+        // and accept this packet (push it to user's RX buffer)
+        // and notify user that there is new data available
+        // Does this mean that we really need a tx buffer for this worker?
+        // Is there any possibility that we got a packet on another iface?
     }
     else
     {
@@ -225,7 +254,6 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
 
     eth_set_data(&eth_frame, ip_payload, ip_len);
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
-
 
     /* printf("UDP: %d\n", udp_len); */
     /* printf("IP : %d\n", ip_len); */
