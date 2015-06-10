@@ -27,14 +27,35 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         spawn_worker(workers[i]);
 
-    char bcast_msg[] = "Goodbye sad world!";
-    mpudp_packet_t *bcast_packet;
-    mpudp_prepare_packet(&bcast_packet, bcast_msg, strlen(bcast_msg));
-    bcast_push(m, bcast_packet);
+    // spawn config monitoring thread
+    pthread_create(&m->config_announcer_id, NULL, monitor_config_announcer, m);
+
+    // move this to the config thread
 
     for(i = 0; i < num_ifaces; i++)
         pthread_join(workers[i]->tx_thread_id, NULL);
         pthread_join(workers[i]->rx_thread_id, NULL);
+
+    pthread_join(m->config_announcer_id, NULL);
+}
+
+void* monitor_config_announcer(void *arg)
+{
+    monitor_t *m = (monitor_t*)arg;
+
+    mpudp_config_t config;
+
+
+    char bcast_msg[] = "Goodbye sad world!";
+    mpudp_packet_t *bcast_packet;
+    mpudp_prepare_packet(&bcast_packet, bcast_msg, strlen(bcast_msg));
+
+    while(1)
+    {
+        bcast_push(m, bcast_packet);
+        sleep(1);
+    }
+
 }
 
 void init_monitor(monitor_t *m)

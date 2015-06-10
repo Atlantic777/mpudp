@@ -17,6 +17,8 @@ struct bcast_buff {
 
 struct monitor {
     pthread_t    id;
+    pthread_t    config_announcer_id;
+    pthread_t    config_receiver_id;
 
     mpudp_packet_t *tx_data[BUFF_LEN];
     int  tx_head;
@@ -34,6 +36,10 @@ struct monitor {
     uint8_t *checkin;
     pthread_mutex_t bcast_mx;
 
+    mpudp_packet_t *bcast_recv;
+    pthread_mutex_t convifg_mx;
+    pthread_cond_t got_new_config;
+
     pthread_cond_t tx_has_data;
     pthread_cond_t tx_not_full;
 
@@ -48,6 +54,8 @@ struct monitor {
 };
 
 void* monitor_thread(void*);
+void* monitor_config_announcer(void*);
+void* monitor_config_receiver(void*);
 void init_monitor(monitor_t *);
 void bcast_push(monitor_t*, mpudp_packet_t*);
 int bcast_empty(monitor_t*);

@@ -70,15 +70,16 @@ void* worker_rx_thread(void *arg)
     monitor_t *m = w->m;
     mpudp_packet_t *tmp;
 
-    struct pcap_pkthdr *pkt_header;
-    const u_char *pkt_data;
-
     while(1)
     {
-        if(pcap_next_ex(w->if_handle, &pkt_header, &pkt_data))
+        if(worker_recv_packet(w, tmp))
         {
-            /* puts("Got the packet..."); */
-            printf("Got the packet: %02X\n", pkt_data[0]);
+            printf("Got the packet.");
+
+            // decode packet
+            // if it's config, push new config to the monitor
+            // if it's data, push to user rx buffer
+            // if it's ACK, notify your tx thread
         }
         else
         {
@@ -133,6 +134,14 @@ int spawn_worker(worker_t *w)
 {
     pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
     pthread_create(&w->rx_thread_id, NULL, &worker_rx_thread, w);
+}
+
+int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
+{
+    struct pcap_pkthdr *pkt_header;
+    const u_char *pkt_data;
+
+    return pcap_next_ex(w->if_handle, &pkt_header, &pkt_data);
 }
 
 int worker_send_packet(worker_t *w, mpudp_packet_t *p)
