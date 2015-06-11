@@ -26,7 +26,6 @@ void* worker_tx_thread(void *arg)
 
         if(m->checkin[w->id] == 1)
         {
-            printf("[%2d] - It's broadcast!\n", w->id);
             m->checkin[w->id] = 0;
 
             tmp = m->bcast_data;
@@ -88,7 +87,7 @@ void* worker_rx_thread(void *arg)
         }
         else
         {
-            puts("No data... :(");
+            /* puts("No data... :("); */
         }
     }
 
@@ -164,8 +163,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->len);
 
     char mac[MAC_LEN_S];
-    puts(chars2mac(frame.dst, mac));
-    puts(w->dst_mac);
+    chars2mac(frame.dst, mac);
 
     if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
     {
