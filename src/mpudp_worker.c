@@ -67,7 +67,7 @@ void* worker_rx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
     monitor_t *m = w->m;
-    mpudp_packet_t *tmp;
+    mpudp_packet_t *tmp = malloc(sizeof(mpudp_packet_t));
 
 
     while(1)
@@ -163,13 +163,18 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         ip_packet_t ip_packet;
         ip_read_packet(&ip_packet, frame.data, frame.data_len);
 
-        puts(ip_hdr_get_addr_s(&ip_packet, ADDR_SRC));
-        puts(ip_hdr_get_addr_s(&ip_packet, ADDR_DST));
-
         udp_dgram_t udp_dgram;
         udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
 
-        printf("[%2d] - UDP payload is %s\n", w->id, udp_dgram.data);
+        mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+
+        if(p->type == MPUDP_CONFIG)
+        {
+            mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
+            mpudp_chars2config(config, p->payload, p->len);
+            printf("Num of remote ifaces: %d\n", config->num_if);
+        }
 
         // if the mpudp_packet_t payload is a config
         // if it's not, just drop it
@@ -213,7 +218,10 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
     ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
     udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
 
-    udp_set_data(&udp_dgram, p->payload, p->len);
+    uint8_t *payload;
+    int len = mpudp_packet2chars(p, &payload);
+
+    udp_set_data(&udp_dgram, payload, len);
     udp_len = udp_dgram2chars(&udp_dgram, &udp_payload);
 
     ip_set_data(&ip_packet, udp_payload, udp_len);
@@ -245,7 +253,10 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     ip_build_packet(&ip_packet, w->src_ip, w->bcast_ip);
     udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
 
-    udp_set_data(&udp_dgram, p->payload, p->len);
+    uint8_t *payload;
+    int len = mpudp_packet2chars(p, &payload);
+
+    udp_set_data(&udp_dgram, payload, len);
     udp_len = udp_dgram2chars(&udp_dgram, &udp_payload);
 
     ip_set_data(&ip_packet, udp_payload, udp_len);

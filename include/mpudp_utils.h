@@ -22,10 +22,10 @@ typedef struct mpudp_if_desc mpudp_if_desc_t;
 typedef struct monitor monitor_t;
 
 struct mpudp_packet {
-    uint8_t *payload;
-    int      len;
-    int      id;
     uint8_t  type;
+    int      id;
+    int      len;
+    uint8_t *payload;
 };
 
 struct mpudp_buff {
@@ -57,5 +57,7 @@ int mpudp_config_matcher();
 void mpudp_build_config(monitor_t*, mpudp_config_t*);
 int mpudp_config2chars(mpudp_config_t*,uint8_t**);
 int mpudp_chars2config(mpudp_config_t*, uint8_t*, int);
+int mpudp_chars2packet(mpudp_packet_t*, uint8_t*, int len);
+int mpudp_packet2chars(mpudp_packet_t*, uint8_t**);
 
 #endif

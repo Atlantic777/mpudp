@@ -77,12 +77,31 @@ int mpudp_chars2config(mpudp_config_t *config, uint8_t *data, int len)
     config->num_if  = data[1];
     config->if_list = malloc(DESC_LEN*config->num_if);
 
-
     int i;
     for(i = 0; i < config->num_if; i++)
     {
         memcpy(&config->if_list[i], data+PREFIX_LEN+DESC_LEN*i, DESC_LEN);
     }
+
+    return 0;
+}
+
+int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
+{
+    *payload = malloc(1+4+4+packet->len);
+    uint8_t *dst = *payload;
+
+    memcpy(dst, packet, 9);
+    memcpy(dst+9, packet->payload, packet->len);
+
+    return 9+packet->len;
+}
+
+int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
+{
+    memcpy(packet, payload, 9);
+    packet->payload = malloc(packet->len);
+    memcpy(packet->payload, payload+9, packet->len);
 
     return 0;
 }

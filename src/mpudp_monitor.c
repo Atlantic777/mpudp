@@ -53,6 +53,8 @@ void* monitor_config_announcer(void *arg)
     int len = mpudp_config2chars(&config, &payload);
     mpudp_prepare_packet(&bcast_packet, payload, len);
 
+    bcast_packet->type = MPUDP_CONFIG;
+
     while(1)
     {
         bcast_push(m, bcast_packet);

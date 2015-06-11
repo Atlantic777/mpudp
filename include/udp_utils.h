@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#define UDP_PREFIX_LEN 8
+
 typedef struct udp_dgram udp_dgram_t;
 typedef struct udp_pseudo_hdr udp_pseudo_hdr_t;
 
