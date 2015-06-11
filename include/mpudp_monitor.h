@@ -2,10 +2,12 @@
 #define MONITOR_H
 
 #include "mpudp_utils.h"
+#include "mpudp_worker.h"
 #include <pthread.h>
 
 typedef struct monitor monitor_t;
 typedef struct bcast_buff bcast_buff_t;
+typedef struct worker worker_t;
 
 struct bcast_buff {
     mpudp_packet_t *packet;
@@ -48,6 +50,8 @@ struct monitor {
 
     pthread_cond_t bcast_has_data;
     pthread_cond_t bcast_done;
+
+    worker_t **workers;
 
     int  pkt_counter;
     int  num_workers;

@@ -10,6 +10,7 @@
 #define WORKER_CONNECTED     1
 
 typedef struct worker worker_t;
+typedef struct monitor monitor_t;
 
 struct worker {
     int id;
@@ -30,6 +31,7 @@ struct worker {
     pcap_t    *if_handle;
     pcap_if_t *if_desc;
     uint8_t state;
+    char name[6];
 };
 
 void* worker_tx_thread(void *arg);

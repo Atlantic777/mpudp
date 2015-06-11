@@ -6,6 +6,7 @@
 #include "tests/pcap_utils.h"
 #include "tests/udp_utils.h"
 #include "tests/ip_utils.h"
+#include "tests/mpudp_utils.h"
 
 int main() {
     check_root();
@@ -13,7 +14,7 @@ int main() {
     CU_initialize_registry();
 
     CU_pSuite eth_utils_suite, net_utils_suite, pcap_utils_suite,
-              udp_utils_suite, ip_utils_suite;
+              udp_utils_suite, ip_utils_suite, mpudp_utils_suite;
 
     /******* Suites *******/
     eth_utils_suite = CU_add_suite("eth utils",
@@ -36,6 +37,9 @@ int main() {
                                     init_udp_utils,
                                     clean_udp_utils);
 
+    mpudp_utils_suite = CU_add_suite("mpudp utils",
+                                    init_mpudp_utils,
+                                    clean_mpudp_utils);
 
     /******* ETH utils *****/
     CU_add_test(eth_utils_suite, "Build eth frame",
@@ -100,6 +104,14 @@ int main() {
                 test_udp_dgram_len);
     CU_add_test(udp_utils_suite, "udp read dgram",
                 test_udp_read_dgram);
+
+    /******* MPUDP utils ******/
+    CU_add_test(mpudp_utils_suite, "Build a MPUDP config",
+                test_mpudp_build_config);
+    CU_add_test(mpudp_utils_suite, "MPUDP config to bytes",
+                test_mpudp_config2chars);
+    CU_add_test(mpudp_utils_suite, "MPUDP byte string to config",
+                test_mpudp_chars2config);
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

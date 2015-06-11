@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include <stdint.h>
+#include "net_utils.h"
 
 #define BUFF_LEN 10
 
@@ -10,10 +11,15 @@
 #define MPUDP_DATA   1
 #define MPUDP_ACK    2
 
+#define MPUDP_IFACE_DESC_LEN (6 + MAC_LEN + 4 + 2)
+#define MPUDP_CONFIG_PREFIX_LEN 2
+
 typedef struct mpudp_buff mpudp_buff_t;
 typedef struct mpudp_packet mpudp_packet_t;
 typedef struct mpudp_config mpudp_config_t;
 typedef struct mpudp_if_desc mpudp_if_desc_t;
+
+typedef struct monitor monitor_t;
 
 struct mpudp_packet {
     uint8_t *payload;
@@ -40,13 +46,16 @@ struct mpudp_config {
 };
 
 struct mpudp_if_desc {
-    uint8_t *name;
-    uint8_t *mac;
+    char name[6];
+    uint8_t mac[MAC_LEN];
     uint32_t ip;
     uint16_t port;
 };
 
 int mpudp_prepare_packet(mpudp_packet_t**, uint8_t*, int);
 int mpudp_config_matcher();
+void mpudp_build_config(monitor_t*, mpudp_config_t*);
+int mpudp_config2chars(mpudp_config_t*,uint8_t**);
+int mpudp_chars2config(mpudp_config_t*, uint8_t*, int);
 
 #endif

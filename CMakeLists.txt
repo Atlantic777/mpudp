@@ -49,11 +49,15 @@ target_link_libraries(t_ip_utils ip_utils)
 add_library(t_udp_utils tests/udp_utils.c)
 target_link_libraries(t_udp_utils udp_utils)
 
+add_library(t_mpudp_utils tests/mpudp_utils.c)
+target_link_libraries(t_mpudp_utils mpudp_utils)
+
 
 # test runner executable
 add_executable(unit-test tests/test_runner.c)
-target_link_libraries(unit-test cunit t_eth_utils t_net_utils t_pcap_utils)
-target_link_libraries(unit-test t_udp_utils t_ip_utils)
+target_link_libraries(unit-test cunit)
+target_link_libraries(unit-test t_net_utils t_pcap_utils t_mpudp_utils)
+target_link_libraries(unit-test t_eth_utils t_udp_utils t_ip_utils)
 
 # playground
 add_executable(playground tests/playground.c)

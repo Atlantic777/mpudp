@@ -1,6 +1,8 @@
 #include "net_utils.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <arpa/inet.h>
 
 int mac2chars(char *mac_string, unsigned char *dest)
 {
@@ -46,4 +48,19 @@ char* chars2mac(unsigned char *mac_raw, char *mac_string)
     sprintf(mac_string+i*3, "%02x", mac_raw[i]);
 
     return mac_string;
+}
+
+uint32_t ip2chars(char *ip_string, uint32_t *dst)
+{
+    uint32_t b_ip;
+
+    inet_pton(AF_INET, ip_string, &b_ip);
+    b_ip = htonl(b_ip);
+
+    if(dst != NULL)
+    {
+        *dst = b_ip;
+    }
+
+    return b_ip;
 }
