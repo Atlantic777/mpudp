@@ -169,19 +169,33 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
 
 
-        if(p->type == MPUDP_CONFIG)
-        {
-            mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
-            mpudp_chars2config(config, p->payload, p->len);
-            printf("Num of remote ifaces: %d\n", config->num_if);
-        }
-
         // if the mpudp_packet_t payload is a config
         // if it's not, just drop it
         // obtain lock to the monitor's remote config storage
         // check the version of the config there, and if it's newer
         // push this one and notify monitor thread of the new config
         // else, just release the lock and drop the packet
+        if(p->type == MPUDP_CONFIG)
+        {
+            mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
+            mpudp_chars2config(config, p->payload, p->len);
+
+            pthread_mutex_lock(&w->m->remote_config_mx);
+            if(config->id > w->m->remote_config->id)
+            {
+                puts("We have a new config!");
+                w->m->remote_config = config;
+
+                pthread_mutex_unlock(&w->m->remote_config_mx);
+                pthread_cond_signal(&w->m->remote_config_changed);
+            }
+            else
+            {
+                pthread_mutex_unlock(&w->m->remote_config_mx);
+            }
+
+        }
+
     }
     else if(memcmp(frame.dst, w->src_mac, MAC_LEN) == 0)
     {
@@ -197,11 +211,8 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         // Does this mean that we really need a tx buffer for this worker?
         // Is there any possibility that we got a packet on another iface?
     }
-    else
-    {
-        return 1;
-    }
 
+    return 0;
 }
 
 int worker_send_packet(worker_t *w, mpudp_packet_t *p)

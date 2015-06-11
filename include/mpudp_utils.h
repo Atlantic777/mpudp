@@ -40,7 +40,7 @@ struct mpudp_buff {
 };
 
 struct mpudp_config {
-    uint8_t id;
+    int8_t id;
     uint8_t num_if;
     mpudp_if_desc_t *if_list;
 };

@@ -51,6 +51,14 @@ struct monitor {
     pthread_cond_t bcast_has_data;
     pthread_cond_t bcast_done;
 
+    mpudp_config_t *local_config;
+    pthread_mutex_t local_config_mx;
+    pthread_cond_t  local_config_changed;
+
+    mpudp_config_t *remote_config;
+    pthread_mutex_t remote_config_mx;
+    pthread_cond_t  remote_config_changed;
+
     worker_t **workers;
 
     int  pkt_counter;

@@ -27,9 +27,9 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         spawn_worker(m->workers[i]);
 
-
-    // spawn config monitoring thread
+    // spawn config monitoring threads
     pthread_create(&m->config_announcer_id, NULL, monitor_config_announcer, m);
+    pthread_create(&m->config_receiver_id, NULL, monitor_config_receiver, m);
 
     // move this to the config thread
 
@@ -38,6 +38,7 @@ void* monitor_thread(void *arg)
         pthread_join(m->workers[i]->rx_thread_id, NULL);
 
     pthread_join(m->config_announcer_id, NULL);
+    pthread_join(m->config_receiver_id, NULL);
 }
 
 void* monitor_config_announcer(void *arg)
@@ -63,6 +64,31 @@ void* monitor_config_announcer(void *arg)
 
 }
 
+void* monitor_config_receiver(void *arg)
+{
+    monitor_t *m = (monitor_t*)arg;
+
+    int last_config_id = m->remote_config->id;
+
+    while(1)
+    {
+        pthread_mutex_lock(&m->remote_config_mx);
+        while(m->remote_config->id == last_config_id)
+        {
+            pthread_cond_wait(&m->remote_config_changed, &m->remote_config_mx);
+        }
+
+        puts("Config really changed!");
+        last_config_id = m->remote_config->id;
+        pthread_mutex_unlock(&m->remote_config_mx);
+
+        // stop workers
+        // change their configs
+        // release workers
+    }
+
+}
+
 void init_monitor(monitor_t *m)
 {
     // init tx buffer
@@ -79,6 +105,8 @@ void init_monitor(monitor_t *m)
 
     // init bcast buffer
     pthread_mutex_init(&m->bcast_mx, NULL);
+    pthread_mutex_init(&m->local_config_mx, NULL);
+    pthread_mutex_init(&m->remote_config_mx, NULL);
 
     // common conditional vars
     pthread_cond_init(&m->tx_has_data, NULL);
@@ -89,6 +117,15 @@ void init_monitor(monitor_t *m)
 
     pthread_cond_init(&m->bcast_has_data, NULL);
     pthread_cond_init(&m->bcast_done, NULL);
+
+    pthread_cond_init(&m->local_config_changed, NULL);
+    pthread_cond_init(&m->remote_config_changed, NULL);
+
+    // config handles
+    m->local_config = malloc(sizeof(mpudp_config_t));
+
+    m->remote_config = malloc(sizeof(mpudp_config_t));
+    m->remote_config->id = -1;
 
     // monitor specific
     m->pkt_counter = 0;
