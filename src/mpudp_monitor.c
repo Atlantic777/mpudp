@@ -13,10 +13,10 @@ void* monitor_thread(void *arg)
     char **iface_names_list;
     int num_ifaces = pcapu_find_all_devs(&iface_names_list);
 
-    worker_t **workers = malloc(sizeof(worker_t*)*num_ifaces);
+    m->workers = malloc(sizeof(worker_t*)*num_ifaces);
 
     for(i = 0; i < num_ifaces; i++)
-        workers[i] = init_worker(i, iface_names_list[i], m, 0.5*i+1);
+        m->workers[i] = init_worker(i, iface_names_list[i], m, 0.5*i+1);
 
     m->num_workers = num_ifaces;
     m->checkin = malloc(sizeof(int)*m->num_workers);
@@ -25,7 +25,7 @@ void* monitor_thread(void *arg)
         m->checkin[i] = 0;
 
     for(i = 0; i < num_ifaces; i++)
-        spawn_worker(workers[i]);
+        spawn_worker(m->workers[i]);
 
 
     // spawn config monitoring thread
@@ -34,8 +34,8 @@ void* monitor_thread(void *arg)
     // move this to the config thread
 
     for(i = 0; i < num_ifaces; i++)
-        pthread_join(workers[i]->tx_thread_id, NULL);
-        pthread_join(workers[i]->rx_thread_id, NULL);
+        pthread_join(m->workers[i]->tx_thread_id, NULL);
+        pthread_join(m->workers[i]->rx_thread_id, NULL);
 
     pthread_join(m->config_announcer_id, NULL);
 }
@@ -44,12 +44,14 @@ void* monitor_config_announcer(void *arg)
 {
     monitor_t *m = (monitor_t*)arg;
 
+
     mpudp_config_t config;
+    mpudp_build_config(m, &config);
+    uint8_t *payload;
 
-
-    char bcast_msg[] = "Goodbye sad world!";
     mpudp_packet_t *bcast_packet;
-    mpudp_prepare_packet(&bcast_packet, bcast_msg, strlen(bcast_msg));
+    int len = mpudp_config2chars(&config, &payload);
+    mpudp_prepare_packet(&bcast_packet, payload, len);
 
     while(1)
     {
