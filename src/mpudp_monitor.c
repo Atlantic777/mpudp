@@ -82,9 +82,21 @@ void* monitor_config_receiver(void *arg)
         last_config_id = m->remote_config->id;
         pthread_mutex_unlock(&m->remote_config_mx);
 
-        // stop workers
-        // change their configs
-        // release workers
+        // do the matching
+        int i;
+        for(i = 0; i < 2; i++)
+        {
+            // stop workers
+            pthread_mutex_lock(&m->workers[i]->config_mx);
+
+            // change their configs
+            chars2ip(m->remote_config->if_list[i].ip, m->workers[i]->dst_ip);
+            m->workers[i]->dst_port = m->remote_config->if_list[i].port;
+            m->workers[i]->state = WORKER_CONNECTED;
+
+            // release workers
+            pthread_mutex_unlock(&m->workers[i]->config_mx);
+        }
     }
 
 }

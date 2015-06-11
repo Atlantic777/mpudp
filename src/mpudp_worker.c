@@ -16,6 +16,7 @@ void* worker_tx_thread(void *arg)
 
     while(1)
     {
+        pthread_mutex_lock(&w->config_mx);
         pthread_mutex_lock(&m->tx_mx);
 
         while(m->tx_num <= 0 && m->checkin[w->id] == 0)
@@ -30,6 +31,7 @@ void* worker_tx_thread(void *arg)
 
             tmp = m->bcast_data;
 
+            pthread_mutex_unlock(&w->config_mx);
             pthread_mutex_unlock(&m->tx_mx);
             pthread_cond_broadcast(&m->bcast_done);
 
@@ -45,6 +47,7 @@ void* worker_tx_thread(void *arg)
             m->tx_num--;
             m->tx_tail =  (m->tx_tail + 1) % BUFF_LEN;
 
+            pthread_mutex_unlock(&w->config_mx);
             pthread_mutex_unlock(&m->tx_mx);
             pthread_cond_signal(&m->tx_not_full);
 
@@ -58,8 +61,10 @@ void* worker_tx_thread(void *arg)
         }
         else
         {
+            pthread_mutex_unlock(&w->config_mx);
             pthread_mutex_unlock(&m->tx_mx);
         }
+
     }
 }
 
@@ -106,28 +111,35 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->src_port = 6666;
     w->dst_port = 8880 + w->id;
 
+    // config src mac
     tmp = pcapu_read_if_mac_s(w->if_desc->name, NULL);
     w->src_mac = malloc(strlen(tmp)+1);
     strcpy(w->src_mac, tmp);
 
+    // config bcast mac
     w->bcast_mac = malloc(MAC_LEN_S);
     strcpy(w->bcast_mac, BCAST_MAC_S);
 
+    // config src ip
     tmp = pcapu_read_if_ip_s(w->if_desc, NULL);
     w->src_ip = malloc(strlen(tmp)+1);
     strcpy(w->src_ip, tmp);
 
+    // config bcast ip
     tmp = pcapu_read_if_bcast_s(w->if_desc, NULL);
     w->bcast_ip = malloc(strlen(tmp)+1);
     strcpy(w->bcast_ip, tmp);
 
-    w->bcast_mac = malloc(MAC_LEN_S);
-    strcpy(w->bcast_mac, BCAST_MAC_S);
+    // alocate space for remote addressess
+    w->dst_ip  = malloc(IP_LEN_S_MAX);
+    w->dst_mac = malloc(MAC_LEN_S);
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
     w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 1000, errbuf);
     w->state = WORKER_NOT_CONNECTED;
+
+    pthread_mutex_init(&w->config_mx, NULL);
 
     return w;
 }

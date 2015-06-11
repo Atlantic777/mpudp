@@ -64,3 +64,10 @@ uint32_t ip2chars(char *ip_string, uint32_t *dst)
 
     return b_ip;
 }
+
+char* chars2ip(uint32_t src, char *dst)
+{
+    uint32_t b_ip = ntohl(src);
+    inet_ntop(AF_INET, &b_ip, dst, IP_LEN_S_MAX);
+    return dst;
+}

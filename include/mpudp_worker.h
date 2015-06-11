@@ -32,6 +32,7 @@ struct worker {
     pcap_if_t *if_desc;
     uint8_t state;
     char name[6];
+    pthread_mutex_t config_mx;
 };
 
 void* worker_tx_thread(void *arg);
