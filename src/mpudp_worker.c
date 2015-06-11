@@ -163,15 +163,14 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     eth_frame_t frame;
     eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->len);
 
-    /* char mac_s[MAC_LEN_S]; */
-    /* puts(chars2mac(frame.src, mac_s)); */
-    /* puts(chars2mac(frame.dst, mac_s)); */
+    char mac[MAC_LEN_S];
+    puts(chars2mac(frame.dst, mac));
+    puts(w->dst_mac);
 
     if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
     {
         printf("[%2d] - We got a broadcast!\n", w->id);
-        // continue decoding ip_packet_t and mpudp_packet_t
-        //
+
         ip_packet_t ip_packet;
         ip_read_packet(&ip_packet, frame.data, frame.data_len);
 
@@ -180,13 +179,6 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 
         mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
 
-
-        // if the mpudp_packet_t payload is a config
-        // if it's not, just drop it
-        // obtain lock to the monitor's remote config storage
-        // check the version of the config there, and if it's newer
-        // push this one and notify monitor thread of the new config
-        // else, just release the lock and drop the packet
         if(p->type == MPUDP_CONFIG)
         {
             mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
@@ -209,7 +201,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         }
 
     }
-    else if(memcmp(frame.dst, w->src_mac, MAC_LEN) == 0)
+    else if(strncmp(mac, w->src_mac, MAC_LEN_S) == 0)
     {
         puts("The frame is for us...");
         // continue decoding ip_packet and mpudp_packet

@@ -91,6 +91,7 @@ void* monitor_config_receiver(void *arg)
 
             // change their configs
             chars2ip(m->remote_config->if_list[i].ip, m->workers[i]->dst_ip);
+            chars2mac(m->remote_config->if_list[i].mac, m->workers[i]->dst_mac);
             m->workers[i]->dst_port = m->remote_config->if_list[i].port;
             m->workers[i]->state = WORKER_CONNECTED;
 
