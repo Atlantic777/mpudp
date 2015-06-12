@@ -16,22 +16,34 @@ struct worker {
     int id;
     pthread_t rx_thread_id;
     pthread_t tx_thread_id;
-    mpudp_buff_t rx_buff;
-    mpudp_buff_t tx_buff;
+    pthread_t global_tx_watcher_id;
+
+    mpudp_packet_t *private_tx_buff;
+    mpudp_packet_t *retransmisson_buff;
+
     monitor_t *m;
+
     int choke;
+
     char *src_ip;
     char *dst_ip;
+
     uint16_t src_port;
     uint16_t dst_port;
+
     char *src_mac;
     char *dst_mac;
+
     char *bcast_mac;
     char *bcast_ip;
+
     pcap_t    *if_handle;
     pcap_if_t *if_desc;
+
     uint8_t state;
+
     char name[6];
+
     pthread_mutex_t config_mx;
 };
 

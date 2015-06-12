@@ -10,3 +10,4 @@ unit-test
 *.a
 tests/playground.c
 t_*
+docs/*

@@ -96,7 +96,6 @@ void* worker_rx_thread(void *arg)
 worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 {
     worker_t *w = malloc(sizeof(worker_t));
-    init_buffer(&w->tx_buff);
     w->m = m;
     w->id = id;
     w->choke = choke*1000000;
