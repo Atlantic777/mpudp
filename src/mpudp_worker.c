@@ -30,12 +30,14 @@ void* worker_tx_thread(void *arg)
         else
         {
             worker_send_packet(w, w->private_tx_buff);
+            w->wait_ack_buff = w->private_tx_buff;
         }
         usleep(w->choke);
 
         w->private_tx_buff = NULL;
-        pthread_cond_signal(&w->tx_empty);
+
         pthread_mutex_unlock(&w->private_tx_buff_mx);
+        pthread_cond_signal(&w->tx_empty);
     }
 }
 
@@ -184,6 +186,13 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     eth_frame_t frame;
     eth_read_frame(&frame, (u_char*)pkt_data, pkt_header->len);
 
+    if(frame.type[0] != 0x08 || frame.type[1] != 0x00)
+    {
+        return 0;
+    }
+
+    /* printf("[%d] - frame type %2hhX %2hhX\n", w->id, frame.type[0], frame.type[1]); */
+
     char mac[MAC_LEN_S];
     chars2mac(frame.dst, mac);
 
@@ -207,7 +216,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
             pthread_mutex_lock(&w->m->remote_config_mx);
             if(config->id > w->m->remote_config->id)
             {
-                puts("We have a new config!");
+                printf("[%d] - We have a new config!\n", w->id);
                 w->m->remote_config = config;
 
                 pthread_mutex_unlock(&w->m->remote_config_mx);
@@ -223,7 +232,6 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     }
     else if(strncmp(mac, w->src_mac, MAC_LEN_S) == 0)
     {
-        puts("The frame is for us...");
         // continue decoding ip_packet and mpudp_packet
         // if packet is ACK, check our buffer, confirm ACK
         // and remove that packet from ACK waiting list
@@ -234,6 +242,33 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         // and notify user that there is new data available
         // Does this mean that we really need a tx buffer for this worker?
         // Is there any possibility that we got a packet on another iface?
+
+        /* printf("[%d] - The frame is for us %hhu...\n", w->id, frame.type[1]); */
+        ip_packet_t ip_packet;
+        ip_read_packet(&ip_packet, frame.data, frame.data_len);
+
+        if(ip_get_proto(&ip_packet) != PROTO_UDP)
+        {
+            /* printf("[%d] - ip proto: %2hhX\n", w->id, ip_get_proto(&ip_packet)); */
+            /* printf("[%d] - not udp packet, dropping...\n", w->id); */
+            return 0;
+        }
+
+        udp_dgram_t udp_dgram;
+        udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
+
+        mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+        if(p->type == MPUDP_DATA)
+        {
+            printf("[%d] - We got data and should send ACK\n", w->id);
+
+            worker_send_ack(w, p->id);
+        }
+        else if(p->type == MPUDP_ACK)
+        {
+            printf("[%d] - got ACK, should empty ack waiting and notify tx\n", w->id);
+        }
     }
 
     return 0;
@@ -248,6 +283,7 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
     int eth_len, ip_len, udp_len;
+
 
     eth_build_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
     ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
@@ -306,6 +342,29 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     /* printf("ETH: %d\n", eth_len); */
 
     pcap_sendpacket(w->if_handle, eth_payload, eth_len);
+
+    return 0;
+}
+
+int worker_send_ack(worker_t *w, int8_t id)
+{
+    mpudp_packet_t *ack = malloc(sizeof(mpudp_packet_t));
+    ack->type = MPUDP_ACK;
+    ack->id   = id;
+    ack->len  = 0;
+
+    pthread_mutex_lock(&w->private_tx_buff_mx);
+    /* printf("[%d] - ack waiting for lock %p\n", w->id, w->private_tx_buff); */
+    while(w->private_tx_buff != NULL)
+    {
+        pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
+    }
+
+    printf("[%d] - pushing ack\n", w->id);
+    w->private_tx_buff = ack;
+
+    pthread_mutex_unlock(&w->private_tx_buff_mx);
+    pthread_cond_broadcast(&w->tx_ready);
 
     return 0;
 }

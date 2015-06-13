@@ -19,7 +19,7 @@ struct worker {
     pthread_t global_tx_watcher_id;
 
     mpudp_packet_t *private_tx_buff;
-    mpudp_packet_t *retransmisson_buff;
+    mpudp_packet_t *wait_ack_buff;
 
     monitor_t *m;
 
@@ -57,5 +57,6 @@ worker_t* init_worker(int, char*, monitor_t*, float);
 int spawn_worker(worker_t* spawn_worker);
 int worker_send_packet(worker_t*, mpudp_packet_t*);
 int worker_send_bcast(worker_t*, mpudp_packet_t*);
+int worker_send_ack(worker_t*, int8_t);
 
 #endif

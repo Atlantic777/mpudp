@@ -92,7 +92,9 @@ int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
     uint8_t *dst = *payload;
 
     memcpy(dst, packet, 9);
-    memcpy(dst+9, packet->payload, packet->len);
+
+    if(packet->len > 0)
+        memcpy(dst+9, packet->payload, packet->len);
 
     return 9+packet->len;
 }
