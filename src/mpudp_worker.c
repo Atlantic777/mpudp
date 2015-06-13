@@ -21,8 +21,6 @@ void* worker_tx_thread(void *arg)
             pthread_cond_wait(&w->tx_ready, &w->private_tx_buff_mx);
         }
 
-        printf("[%d] - sending packet...\n", w->id);
-
         if(w->private_tx_buff->type == MPUDP_CONFIG)
         {
             worker_send_bcast(w, w->private_tx_buff);
@@ -261,13 +259,13 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 
         if(p->type == MPUDP_DATA)
         {
-            printf("[%d] - We got data and should send ACK\n", w->id);
+            /* printf("[%d] - We got data and should send ACK\n", w->id); */
 
             worker_send_ack(w, p->id);
         }
         else if(p->type == MPUDP_ACK)
         {
-            printf("[%d] - got ACK, should empty ack waiting and notify tx\n", w->id);
+            printf("[%d] - got ACK %d, should empty ack waiting and notify tx\n", w->id, p->id);
         }
     }
 
@@ -282,8 +280,9 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
-    int eth_len, ip_len, udp_len;
+    printf("[%d] - sending packet...\n", w->id);
 
+    int eth_len, ip_len, udp_len;
 
     eth_build_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
     ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
@@ -301,10 +300,6 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
     eth_set_data(&eth_frame, ip_payload, ip_len);
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
 
-    /* printf("UDP: %d\n", udp_len); */
-    /* printf("IP : %d\n", ip_len); */
-    /* printf("ETH: %d\n", eth_len); */
-
     pcap_sendpacket(w->if_handle, eth_payload, eth_len);
 
     return 0;
@@ -315,6 +310,8 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     eth_frame_t eth_frame;
     ip_packet_t ip_packet;
     udp_dgram_t udp_dgram;
+
+    printf("[%d] - sending bcast...\n", w->id);
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
@@ -337,10 +334,6 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     eth_set_data(&eth_frame, ip_payload, ip_len);
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
 
-    /* printf("UDP: %d\n", udp_len); */
-    /* printf("IP : %d\n", ip_len); */
-    /* printf("ETH: %d\n", eth_len); */
-
     pcap_sendpacket(w->if_handle, eth_payload, eth_len);
 
     return 0;
@@ -354,13 +347,12 @@ int worker_send_ack(worker_t *w, int8_t id)
     ack->len  = 0;
 
     pthread_mutex_lock(&w->private_tx_buff_mx);
-    /* printf("[%d] - ack waiting for lock %p\n", w->id, w->private_tx_buff); */
     while(w->private_tx_buff != NULL)
     {
         pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
     }
 
-    printf("[%d] - pushing ack\n", w->id);
+    printf("[%d] - pushing ack %d\n", w->id, id);
     w->private_tx_buff = ack;
 
     pthread_mutex_unlock(&w->private_tx_buff_mx);
