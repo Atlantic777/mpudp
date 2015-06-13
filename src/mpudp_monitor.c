@@ -36,6 +36,7 @@ void* monitor_thread(void *arg)
     for(i = 0; i < num_ifaces; i++)
         pthread_join(m->workers[i]->tx_thread_id, NULL);
         pthread_join(m->workers[i]->rx_thread_id, NULL);
+        pthread_join(m->workers[i]->global_tx_watcher_id, NULL);
 
     pthread_join(m->config_announcer_id, NULL);
     pthread_join(m->config_receiver_id, NULL);
@@ -98,6 +99,8 @@ void* monitor_config_receiver(void *arg)
             // release workers
             pthread_mutex_unlock(&m->workers[i]->config_mx);
         }
+
+        pthread_cond_broadcast(&m->tx_has_data);
     }
 
 }
@@ -117,7 +120,7 @@ void init_monitor(monitor_t *m)
     pthread_mutex_init(&m->rx_mx, NULL);
 
     // init bcast buffer
-    pthread_mutex_init(&m->bcast_mx, NULL);
+    /* pthread_mutex_init(&m->bcast_mx, NULL); */
     pthread_mutex_init(&m->local_config_mx, NULL);
     pthread_mutex_init(&m->remote_config_mx, NULL);
 
@@ -128,7 +131,7 @@ void init_monitor(monitor_t *m)
     pthread_cond_init(&m->rx_has_data, NULL);
     pthread_cond_init(&m->rx_not_full, NULL);
 
-    pthread_cond_init(&m->bcast_has_data, NULL);
+    /* pthread_cond_init(&m->bcast_has_data, NULL); */
     pthread_cond_init(&m->bcast_done, NULL);
 
     pthread_cond_init(&m->local_config_changed, NULL);
@@ -158,9 +161,13 @@ int bcast_empty(monitor_t *m)
 
 void bcast_push(monitor_t *m, mpudp_packet_t *p)
 {
-    pthread_mutex_lock(&m->bcast_mx);
+    /* pthread_mutex_lock(&m->bcast_mx); */
+    pthread_mutex_lock(&m->tx_mx);
     while(bcast_empty(m) == 0)
-        pthread_cond_wait(&m->bcast_done, &m->bcast_mx);
+    {
+        /* pthread_cond_wait(&m->bcast_done, &m->bcast_mx); */
+        pthread_cond_wait(&m->bcast_done, &m->tx_mx);
+    }
 
     int i;
     for(i = 0; i < m->num_workers; i++)
@@ -168,6 +175,7 @@ void bcast_push(monitor_t *m, mpudp_packet_t *p)
 
     m->bcast_data = p;
 
-    pthread_mutex_unlock(&m->bcast_mx);
+    /* pthread_mutex_unlock(&m->bcast_mx); */
+    pthread_mutex_unlock(&m->tx_mx);
     pthread_cond_broadcast(&m->tx_has_data);
 }

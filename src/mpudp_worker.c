@@ -12,58 +12,30 @@ void* worker_tx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
     monitor_t *m = w->m;
-    mpudp_packet_t *tmp; // worker's tx buffer
 
     while(1)
     {
-        pthread_mutex_lock(&w->config_mx);
-        pthread_mutex_lock(&m->tx_mx);
-
-        while(m->tx_num <= 0 && m->checkin[w->id] == 0)
+        pthread_mutex_lock(&w->private_tx_buff_mx);
+        while(w->private_tx_buff == NULL)
         {
-            pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
+            pthread_cond_wait(&w->tx_ready, &w->private_tx_buff_mx);
         }
 
-        if(m->checkin[w->id] == 1)
+        printf("[%d] - sending packet...\n", w->id);
+
+        if(w->private_tx_buff->type == MPUDP_CONFIG)
         {
-            m->checkin[w->id] = 0;
-
-            tmp = m->bcast_data;
-
-            pthread_mutex_unlock(&w->config_mx);
-            pthread_mutex_unlock(&m->tx_mx);
-            pthread_cond_broadcast(&m->bcast_done);
-
-            worker_send_bcast(w, tmp);
-            usleep(w->choke);
-        }
-        else if(w->state == WORKER_CONNECTED)
-        {
-            int id = m->tx_data[m->tx_tail]->id;
-
-            tmp = m->tx_data[m->tx_tail];
-
-            m->tx_num--;
-            m->tx_tail =  (m->tx_tail + 1) % BUFF_LEN;
-
-            pthread_mutex_unlock(&w->config_mx);
-            pthread_mutex_unlock(&m->tx_mx);
-            pthread_cond_signal(&m->tx_not_full);
-
-            usleep(w->choke);
-
-            worker_send_packet(w, tmp);
-            free(tmp);
-
-            printf("Worker %d got it! Sending: %3d ", w->id, id);
-            printf("tail: %3d, head: %3d num: %3d\n", m->tx_tail, m->tx_head, m->tx_num);
+            worker_send_bcast(w, w->private_tx_buff);
         }
         else
         {
-            pthread_mutex_unlock(&w->config_mx);
-            pthread_mutex_unlock(&m->tx_mx);
+            worker_send_packet(w, w->private_tx_buff);
         }
+        usleep(w->choke);
 
+        w->private_tx_buff = NULL;
+        pthread_cond_signal(&w->tx_empty);
+        pthread_mutex_unlock(&w->private_tx_buff_mx);
     }
 }
 
@@ -71,26 +43,19 @@ void* worker_rx_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
     monitor_t *m = w->m;
-    mpudp_packet_t *tmp = malloc(sizeof(mpudp_packet_t));
-
+    mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
 
     while(1)
     {
-        if(worker_recv_packet(w, tmp))
+        if(worker_recv_packet(w, p))
         {
-            printf("[%2d] - Got the packet.\n", w->id);
-
-            // decode packet
-            // if it's config, push new config to the monitor
-            // if it's data, push to user rx buffer
-            // if it's ACK, notify your tx thread
+            /* printf("[%d] - Got the packet\n", w->id); */
         }
         else
         {
-            /* puts("No data... :("); */
+            /* printf("[%d] - No data... :(\n", w->id); */
         }
     }
-
 }
 
 worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
@@ -99,6 +64,8 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->m = m;
     w->id = id;
     w->choke = choke*1000000;
+
+    w->private_tx_buff = NULL;
 
     char *tmp;
 
@@ -146,8 +113,60 @@ int spawn_worker(worker_t *w)
 {
     pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
     pthread_create(&w->rx_thread_id, NULL, &worker_rx_thread, w);
+    pthread_create(&w->global_tx_watcher_id,NULL,&worker_tx_watcher_thread, w);
 }
 
+
+void* worker_tx_watcher_thread(void *arg)
+{
+    worker_t *w = (worker_t*)arg;
+    monitor_t *m = w->m;
+    mpudp_packet_t *tmp;
+
+    while(1)
+    {
+        // fetch to tmp
+        pthread_mutex_lock(&m->tx_mx);
+        while( (m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED) && m->checkin[w->id] == 0)
+        {
+            pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
+        }
+
+        if(m->checkin[w->id] == 1)
+        {
+            tmp = m->bcast_data;
+            /* printf("[%d] - got bcast\n", w->id); */
+
+            m->checkin[w->id] = 0;
+            pthread_cond_broadcast(&m->bcast_done);
+        }
+        else
+        {
+            tmp = m->tx_data[m->tx_tail];
+            /* printf("[%d] - got user's data\n", w->id); */
+
+            m->tx_num--;
+            m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
+
+            pthread_cond_broadcast(&m->tx_not_full);
+        }
+        pthread_mutex_unlock(&m->tx_mx);
+
+
+        // push to private tx buff
+        pthread_mutex_lock(&w->private_tx_buff_mx);
+        while( w->private_tx_buff != NULL)
+        {
+            pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
+        }
+
+        w->private_tx_buff = tmp;
+        /* printf("[%d] - pushed to tx\n", w->id); */
+
+        pthread_cond_signal(&w->tx_ready);
+        pthread_mutex_unlock(&w->private_tx_buff_mx);
+    }
+}
 int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 {
     struct pcap_pkthdr *pkt_header;
@@ -166,7 +185,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 
     if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
     {
-        printf("[%2d] - We got a broadcast!\n", w->id);
+        printf("[%d] - We got a broadcast!\n", w->id);
 
         ip_packet_t ip_packet;
         ip_read_packet(&ip_packet, frame.data, frame.data_len);

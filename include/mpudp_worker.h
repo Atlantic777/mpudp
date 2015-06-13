@@ -45,9 +45,14 @@ struct worker {
     char name[6];
 
     pthread_mutex_t config_mx;
+    pthread_mutex_t private_tx_buff_mx;
+    pthread_cond_t  tx_ready;
+    pthread_cond_t  tx_empty;
 };
 
 void* worker_tx_thread(void *arg);
+void* worker_rx_thread(void *arg);
+void* worker_tx_watcher_thread(void*arg);
 worker_t* init_worker(int, char*, monitor_t*, float);
 int spawn_worker(worker_t* spawn_worker);
 int worker_send_packet(worker_t*, mpudp_packet_t*);
