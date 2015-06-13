@@ -39,10 +39,12 @@ void send_packet(uint8_t *data, int len, monitor_t *m)
 
 
     p->id = m->pkt_counter++;
+    p->type = MPUDP_DATA;
 
     m->tx_data[m->tx_head] = p;
     m->tx_num++;
     m->tx_head = (m->tx_head+1) % BUFF_LEN;
+
 
     pthread_mutex_unlock(&m->tx_mx);
 
