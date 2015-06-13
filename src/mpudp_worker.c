@@ -105,6 +105,10 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
+    pthread_mutex_init(&w->private_tx_buff_mx, NULL);
+
+    pthread_cond_init(&w->tx_empty, NULL);
+    pthread_cond_init(&w->tx_ready, NULL);
 
     return w;
 }
