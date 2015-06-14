@@ -46,8 +46,8 @@ void* worker_tx_thread(void *arg)
 
         w->private_tx_buff = NULL;
 
-        pthread_mutex_unlock(&w->private_tx_buff_mx);
         pthread_cond_broadcast(&w->tx_empty);
+        pthread_mutex_unlock(&w->private_tx_buff_mx);
     }
 }
 
@@ -258,13 +258,9 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
                 printf("[%d] - We have a new config!\n", w->id);
                 w->m->remote_config = config;
 
-                pthread_mutex_unlock(&w->m->remote_config_mx);
                 pthread_cond_signal(&w->m->remote_config_changed);
             }
-            else
-            {
-                pthread_mutex_unlock(&w->m->remote_config_mx);
-            }
+            pthread_mutex_unlock(&w->m->remote_config_mx);
 
         }
 
@@ -405,8 +401,8 @@ int worker_send_ack(worker_t *w, int8_t id)
     printf("[%d] - pushing ack %d\n", w->id, id);
     w->private_tx_buff = ack;
 
-    pthread_mutex_unlock(&w->private_tx_buff_mx);
     pthread_cond_broadcast(&w->tx_ready);
+    pthread_mutex_unlock(&w->private_tx_buff_mx);
 
     return 0;
 }

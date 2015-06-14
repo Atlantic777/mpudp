@@ -176,6 +176,6 @@ void bcast_push(monitor_t *m, mpudp_packet_t *p)
     m->bcast_data = p;
 
     /* pthread_mutex_unlock(&m->bcast_mx); */
-    pthread_mutex_unlock(&m->tx_mx);
     pthread_cond_broadcast(&m->tx_has_data);
+    pthread_mutex_unlock(&m->tx_mx);
 }

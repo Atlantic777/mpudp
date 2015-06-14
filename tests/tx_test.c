@@ -45,10 +45,8 @@ void send_packet(uint8_t *data, int len, monitor_t *m)
     m->tx_num++;
     m->tx_head = (m->tx_head+1) % BUFF_LEN;
 
-
-    pthread_mutex_unlock(&m->tx_mx);
-
     pthread_cond_broadcast(&m->tx_has_data);
+    pthread_mutex_unlock(&m->tx_mx);
 }
 
 void fill_rx_buffer(monitor_t *m)
