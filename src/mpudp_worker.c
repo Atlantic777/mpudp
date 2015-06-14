@@ -34,7 +34,7 @@ void* worker_tx_thread(void *arg)
             /* w->wait_ack_buff = NULL; */
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
         }
-        usleep(w->choke);
+        /* usleep(w->choke); */
 
         w->private_tx_buff = NULL;
 
@@ -51,6 +51,7 @@ void* worker_rx_thread(void *arg)
 
     while(1)
     {
+        printf("[%d] - rx waiting.\n", w->id);
         if(worker_recv_packet(w, p))
         {
             /* printf("[%d] - Got the packet\n", w->id); */
@@ -159,7 +160,7 @@ void* worker_tx_watcher_thread(void *arg)
             {
                 tmp = m->tx_data[m->tx_tail];
 
-                printf("[%d] - we can get new user's data %d\n", w->id, tmp->id);
+                /* printf("[%d] - we can get new user's data %d\n", w->id, tmp->id); */
 
 
                 m->tx_num--;
@@ -186,7 +187,7 @@ void* worker_tx_watcher_thread(void *arg)
                 pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
             }
 
-            printf("[%d] - pushed %d to private tx\n", w->id, tmp->id);
+            /* printf("[%d] - pushed %d to private tx\n", w->id, tmp->id); */
 
             w->private_tx_buff = tmp;
             tmp = NULL;
@@ -221,7 +222,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 
     if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
     {
-        printf("[%d] - We got a broadcast!\n", w->id);
+        /* printf("[%d] - We got a broadcast!\n", w->id); */
 
         ip_packet_t ip_packet;
         ip_read_packet(&ip_packet, frame.data, frame.data_len);
@@ -290,7 +291,16 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         }
         else if(p->type == MPUDP_ACK)
         {
-            printf("[%d] - got ACK %d, should empty ack waiting and notify tx\n", w->id, p->id);
+            /* printf("[%d] - got ACK %d, should empty ack waiting and notify tx\n", w->id, p->id); */
+
+            pthread_mutex_lock(&w->wait_ack_buff_mx);
+            if(w->wait_ack_buff != NULL && p->id == w->wait_ack_buff->id)
+            {
+                printf("[%d] - we got the right ACK for %d\n", w->id, p->id);
+                w->wait_ack_buff = NULL;
+                pthread_cond_broadcast(&w->m->tx_has_data);
+            }
+            pthread_mutex_unlock(&w->wait_ack_buff_mx);
         }
     }
 
@@ -305,7 +315,7 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
-    printf("[%d] - sending packet...\n", w->id);
+    printf("[%d] - sending packet... %d\n", w->id, p->id);
 
     int eth_len, ip_len, udp_len;
 
@@ -336,7 +346,7 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     ip_packet_t ip_packet;
     udp_dgram_t udp_dgram;
 
-    printf("[%d] - sending bcast...\n", w->id);
+    /* printf("[%d] - sending bcast...\n", w->id); */
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
@@ -396,8 +406,8 @@ int watchdog_check_state(worker_t *w)
     pthread_mutex_unlock(&w->private_tx_buff_mx);
     pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-    printf("[%d] - watcher state: users_data %d - transaction %d - bcast-data %d\n",
-            w->id, users_data, tx_transaction, bcast_data);
+    /* printf("[%d] - watcher state: users_data %d - transaction %d - bcast-data %d\n", */
+            /* w->id, users_data, tx_transaction, bcast_data); */
 
     return (users_data || tx_transaction) && bcast_data;
 }
