@@ -17,6 +17,7 @@ struct worker {
     pthread_t rx_thread_id;
     pthread_t tx_thread_id;
     pthread_t global_tx_watcher_id;
+    pthread_t arq_watcher_id;
 
     mpudp_packet_t *private_tx_buff;
     mpudp_packet_t *wait_ack_buff;
@@ -44,11 +45,14 @@ struct worker {
 
     char name[6];
 
+    uint8_t last_send_time;
+
     pthread_mutex_t config_mx;
     pthread_mutex_t private_tx_buff_mx;
     pthread_mutex_t wait_ack_buff_mx;
     pthread_cond_t  tx_ready;
     pthread_cond_t  tx_empty;
+    pthread_cond_t  wait_ack_full;
 };
 
 void* worker_tx_thread(void *arg);
@@ -60,5 +64,5 @@ int worker_send_packet(worker_t*, mpudp_packet_t*);
 int worker_send_bcast(worker_t*, mpudp_packet_t*);
 int worker_send_ack(worker_t*, int8_t);
 int watchdog_check_state(worker_t*);
-
+void* worker_arq_watcher(void *arg);
 #endif

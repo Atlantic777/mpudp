@@ -7,6 +7,7 @@
 #include "pcap_utils.h"
 #include <pcap.h>
 #include <string.h>
+#include <time.h>
 
 void* worker_tx_thread(void *arg)
 {
@@ -25,21 +26,28 @@ void* worker_tx_thread(void *arg)
         {
             worker_send_bcast(w, w->private_tx_buff);
         }
-        else
+        else if(w->private_tx_buff->type == MPUDP_DATA)
         {
             worker_send_packet(w, w->private_tx_buff);
             pthread_mutex_lock(&w->wait_ack_buff_mx);
             w->wait_ack_buff = w->private_tx_buff;
             /* printf("[%d] - tx thread changed ack waiting buff state to %p\n", w->id, w->wait_ack_buff); */
             /* w->wait_ack_buff = NULL; */
+            w->last_send_time = time(NULL);
+            pthread_cond_broadcast(&w->wait_ack_full);
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
+        }
+        else
+        {
+            // we are sending ACK
+            worker_send_packet(w, w->private_tx_buff);
         }
         /* usleep(w->choke); */
 
         w->private_tx_buff = NULL;
 
         pthread_mutex_unlock(&w->private_tx_buff_mx);
-        pthread_cond_signal(&w->tx_empty);
+        pthread_cond_broadcast(&w->tx_empty);
     }
 }
 
@@ -51,7 +59,6 @@ void* worker_rx_thread(void *arg)
 
     while(1)
     {
-        printf("[%d] - rx waiting.\n", w->id);
         if(worker_recv_packet(w, p))
         {
             /* printf("[%d] - Got the packet\n", w->id); */
@@ -59,6 +66,10 @@ void* worker_rx_thread(void *arg)
         else
         {
             /* printf("[%d] - No data... :(\n", w->id); */
+            // Given that there is no data received
+            // And we should send ACK
+            // Then we should rentransmit packet from the ACK buffer
+            // and increment retransmission count
         }
     }
 }
@@ -106,7 +117,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 1000, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 5, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -115,8 +126,11 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     pthread_cond_init(&w->tx_empty, NULL);
     pthread_cond_init(&w->tx_ready, NULL);
+    pthread_cond_init(&w->wait_ack_full, NULL);
 
     w->wait_ack_buff = NULL;
+
+    w->last_send_time = 0;
 
     return w;
 }
@@ -126,6 +140,7 @@ int spawn_worker(worker_t *w)
     pthread_create(&w->tx_thread_id, NULL, &worker_tx_thread, w);
     pthread_create(&w->rx_thread_id, NULL, &worker_rx_thread, w);
     pthread_create(&w->global_tx_watcher_id,NULL,&worker_tx_watcher_thread, w);
+    pthread_create(&w->arq_watcher_id, NULL, &worker_arq_watcher, w);
 }
 
 
@@ -410,4 +425,46 @@ int watchdog_check_state(worker_t *w)
             /* w->id, users_data, tx_transaction, bcast_data); */
 
     return (users_data || tx_transaction) && bcast_data;
+}
+
+void* worker_arq_watcher(void *arg)
+{
+    worker_t *w = (worker_t*)arg;
+    uint8_t current_time;
+
+    while(1)
+    {
+        /* printf("[%d] - ARQ alive\n", w->id); */
+        pthread_mutex_lock(&w->wait_ack_buff_mx);
+        while(w->wait_ack_buff == NULL)
+        {
+            pthread_cond_wait(&w->wait_ack_full, &w->wait_ack_buff_mx);
+        }
+        pthread_mutex_unlock(&w->wait_ack_buff_mx);
+
+        // ack buffer is really full
+        // I'll check it's timestamp
+        // And if I should retransmit, I will bump ARQ cnt
+        // And push it to tx
+
+        current_time = time(NULL);
+
+        if((current_time - w->last_send_time) > 1)
+        {
+            printf("[%d] - should retransmit\n", w->id);
+
+            pthread_mutex_lock(&w->private_tx_buff_mx);
+            while(w->private_tx_buff != NULL)
+            {
+                pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
+            }
+
+            w->private_tx_buff = w->wait_ack_buff;
+            pthread_cond_broadcast(&w->tx_ready);
+            pthread_mutex_unlock(&w->private_tx_buff_mx);
+        }
+
+
+        sleep(1);
+    }
 }
