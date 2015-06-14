@@ -46,6 +46,7 @@ struct worker {
 
     pthread_mutex_t config_mx;
     pthread_mutex_t private_tx_buff_mx;
+    pthread_mutex_t wait_ack_buff_mx;
     pthread_cond_t  tx_ready;
     pthread_cond_t  tx_empty;
 };
@@ -58,5 +59,6 @@ int spawn_worker(worker_t* spawn_worker);
 int worker_send_packet(worker_t*, mpudp_packet_t*);
 int worker_send_bcast(worker_t*, mpudp_packet_t*);
 int worker_send_ack(worker_t*, int8_t);
+int watchdog_check_state(worker_t*);
 
 #endif

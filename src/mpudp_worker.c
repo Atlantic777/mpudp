@@ -28,7 +28,11 @@ void* worker_tx_thread(void *arg)
         else
         {
             worker_send_packet(w, w->private_tx_buff);
+            pthread_mutex_lock(&w->wait_ack_buff_mx);
             w->wait_ack_buff = w->private_tx_buff;
+            /* printf("[%d] - tx thread changed ack waiting buff state to %p\n", w->id, w->wait_ack_buff); */
+            /* w->wait_ack_buff = NULL; */
+            pthread_mutex_unlock(&w->wait_ack_buff_mx);
         }
         usleep(w->choke);
 
@@ -106,9 +110,12 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     pthread_mutex_init(&w->config_mx, NULL);
     pthread_mutex_init(&w->private_tx_buff_mx, NULL);
+    pthread_mutex_init(&w->wait_ack_buff_mx, NULL);
 
     pthread_cond_init(&w->tx_empty, NULL);
     pthread_cond_init(&w->tx_ready, NULL);
+
+    w->wait_ack_buff = NULL;
 
     return w;
 }
@@ -131,7 +138,8 @@ void* worker_tx_watcher_thread(void *arg)
     {
         // fetch to tmp
         pthread_mutex_lock(&m->tx_mx);
-        while( (m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED) && m->checkin[w->id] == 0)
+        /* while( (m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED) && m->checkin[w->id] == 0) */
+        while(watchdog_check_state(w))
         {
             pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
         }
@@ -139,36 +147,53 @@ void* worker_tx_watcher_thread(void *arg)
         if(m->checkin[w->id] == 1)
         {
             tmp = m->bcast_data;
-            /* printf("[%d] - got bcast\n", w->id); */
 
             m->checkin[w->id] = 0;
             pthread_cond_broadcast(&m->bcast_done);
         }
         else
         {
-            tmp = m->tx_data[m->tx_tail];
-            /* printf("[%d] - got user's data\n", w->id); */
+            pthread_mutex_lock(&w->private_tx_buff_mx);
+            pthread_mutex_lock(&w->wait_ack_buff_mx);
+            if(w->wait_ack_buff == NULL && w->private_tx_buff == NULL)
+            {
+                tmp = m->tx_data[m->tx_tail];
 
-            m->tx_num--;
-            m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
+                printf("[%d] - we can get new user's data %d\n", w->id, tmp->id);
 
-            pthread_cond_broadcast(&m->tx_not_full);
+
+                m->tx_num--;
+                m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
+
+                pthread_cond_broadcast(&m->tx_not_full);
+            }
+            else
+            {
+                printf("[%d] - waiting for ACK, can't get new data\n", w->id);
+            }
+            pthread_mutex_unlock(&w->private_tx_buff_mx);
+            pthread_mutex_unlock(&w->wait_ack_buff_mx);
         }
         pthread_mutex_unlock(&m->tx_mx);
 
 
-        // push to private tx buff
-        pthread_mutex_lock(&w->private_tx_buff_mx);
-        while( w->private_tx_buff != NULL)
+        if(tmp != NULL)
         {
-            pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
+            // push to private tx buff
+            pthread_mutex_lock(&w->private_tx_buff_mx);
+            while( w->private_tx_buff != NULL)
+            {
+                pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
+            }
+
+            printf("[%d] - pushed %d to private tx\n", w->id, tmp->id);
+
+            w->private_tx_buff = tmp;
+            tmp = NULL;
+
+            pthread_cond_signal(&w->tx_ready);
+            pthread_mutex_unlock(&w->private_tx_buff_mx);
         }
-
-        w->private_tx_buff = tmp;
-        /* printf("[%d] - pushed to tx\n", w->id); */
-
-        pthread_cond_signal(&w->tx_ready);
-        pthread_mutex_unlock(&w->private_tx_buff_mx);
     }
 }
 int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
@@ -359,4 +384,19 @@ int worker_send_ack(worker_t *w, int8_t id)
     pthread_cond_broadcast(&w->tx_ready);
 
     return 0;
+}
+
+int watchdog_check_state(worker_t *w)
+{
+    pthread_mutex_lock(&w->private_tx_buff_mx);
+    pthread_mutex_lock(&w->wait_ack_buff_mx);
+    int users_data = w->m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED || w->wait_ack_buff != NULL;
+    int bcast_data = w->m->checkin[w->id] == 0;
+    int tx_transaction = w->private_tx_buff != NULL;
+    pthread_mutex_unlock(&w->private_tx_buff_mx);
+    pthread_mutex_unlock(&w->wait_ack_buff_mx);
+
+    printf("[%d] - watcher state: users_data %d - bcast-data %d\n", w->id, users_data, bcast_data);
+
+    return users_data && bcast_data;
 }
