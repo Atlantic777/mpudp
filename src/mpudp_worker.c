@@ -390,13 +390,14 @@ int watchdog_check_state(worker_t *w)
 {
     pthread_mutex_lock(&w->private_tx_buff_mx);
     pthread_mutex_lock(&w->wait_ack_buff_mx);
-    int users_data = w->m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED || w->wait_ack_buff != NULL;
+    int users_data = w->m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED;
     int bcast_data = w->m->checkin[w->id] == 0;
-    int tx_transaction = w->private_tx_buff != NULL;
+    int tx_transaction = w->private_tx_buff != NULL || w->wait_ack_buff != NULL;
     pthread_mutex_unlock(&w->private_tx_buff_mx);
     pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-    printf("[%d] - watcher state: users_data %d - bcast-data %d\n", w->id, users_data, bcast_data);
+    printf("[%d] - watcher state: users_data %d - transaction %d - bcast-data %d\n",
+            w->id, users_data, tx_transaction, bcast_data);
 
-    return users_data && bcast_data;
+    return (users_data || tx_transaction) && bcast_data;
 }
