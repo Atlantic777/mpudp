@@ -7,27 +7,6 @@
 
 void send_packet(uint8_t *data, int len, monitor_t *m)
 {
-    /* mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));; */
-    /* p->payload = malloc(sizeof(len)); */
-    /* p->len     = len; */
-    /* memcpy(p->payload, data, len); */
-    /*  */
-    /* mpudp_buff_t *buff = &m->tx_buff; */
-    /*  */
-    /* pthread_mutex_lock(&buff->mx); */
-    /* while(buff->num >= BUFF_LEN) */
-    /*     pthread_cond_wait(&buff->full, &buff->mx); */
-    /*  */
-    /* p->id = m->pkt_counter++; */
-    /*  */
-    /* buff->data[buff->head] = p; */
-    /* buff->num++; */
-    /* buff->head = (buff->head+1) % BUFF_LEN; */
-    /*  */
-    /* pthread_mutex_unlock(&buff->mx); */
-    /*  */
-    /* pthread_cond_broadcast(&buff->empty); */
-
     mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
     p->payload = malloc(sizeof(len));
     p->len = len;
@@ -49,23 +28,12 @@ void send_packet(uint8_t *data, int len, monitor_t *m)
     pthread_mutex_unlock(&m->tx_mx);
 }
 
-void fill_rx_buffer(monitor_t *m)
-{
-    /* mpudp_buff_t *buff = &m->rx_buff; */
-    /*  */
-}
-
-int receive_packet(mpudp_packet_t *p, monitor_t *m)
-{
-
-}
-
 void dummy_send(monitor_t *m)
 {
     int i;
     uint8_t data[] = "Hello world!\n";
 
-    for(i = 0; i < 20; i++)
+    for(i = 0; i < 1000; i++)
         send_packet(data, strlen(data), m);
 
     puts("user finished sending");
