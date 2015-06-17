@@ -81,3 +81,6 @@ target_link_libraries(t_read_addr pcap_utils worker)
 
 add_executable(t_worker_init tests/worker_init.c)
 target_link_libraries(t_worker_init pthread monitor)
+
+add_executable(t_rx_test tests/rx_test.c)
+target_link_libraries(t_rx_test monitor pthread)
