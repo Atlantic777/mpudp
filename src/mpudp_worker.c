@@ -385,7 +385,7 @@ int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
     return 0;
 }
 
-int worker_send_ack(worker_t *w, int8_t id)
+int worker_send_ack(worker_t *w, uint32_t id)
 {
     mpudp_packet_t *ack = malloc(sizeof(mpudp_packet_t));
     ack->type = MPUDP_ACK;

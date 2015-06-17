@@ -23,7 +23,7 @@ typedef struct monitor monitor_t;
 
 struct mpudp_packet {
     uint8_t  type;
-    int      id;
+    uint32_t id;
     int      len;
     uint8_t *payload;
 };
