@@ -298,7 +298,30 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         {
             /* printf("[%d] - We got data and should send ACK\n", w->id); */
 
-            worker_send_ack(w, p->id);
+
+            pthread_mutex_lock(&w->m->rx_mx);
+            while(w->m->rx_num >= BUFF_LEN)
+                pthread_cond_wait(&w->m->rx_not_full, &w->m->rx_mx);
+
+            // if we will not block rx buffer
+            // and we didn't already receive this packet
+            // then store new
+            // else just send ack and drop it
+
+            if((w->m->rx_data[p->id % BUFF_LEN] == NULL) && (p->id >= w->m->user_expected_id))
+            {
+                w->m->rx_data[p->id % BUFF_LEN] = p;
+                w->m->rx_num++;
+                printf("[%d] - storing packet %d on %d\n", w->id, p->id, p->id % BUFF_LEN);
+                worker_send_ack(w, p->id);
+            }
+            else
+            {
+                printf("[%d] - droping packet %d\n", w->id, p->id);
+            }
+
+            pthread_cond_broadcast(&w->m->rx_has_data);
+            pthread_mutex_unlock(&w->m->rx_mx);
         }
         else if(p->type == MPUDP_ACK)
         {
@@ -326,7 +349,7 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
-    printf("[%d] - sending packet... %d\n", w->id, p->id);
+    /* printf("[%d] - sending packet... %d\n", w->id, p->id); */
 
     int eth_len, ip_len, udp_len;
 
@@ -398,7 +421,7 @@ int worker_send_ack(worker_t *w, uint32_t id)
         pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx);
     }
 
-    printf("[%d] - pushing ack %d\n", w->id, id);
+    /* printf("[%d] - pushing ack %d\n", w->id, id); */
     w->private_tx_buff = ack;
 
     pthread_cond_broadcast(&w->tx_ready);

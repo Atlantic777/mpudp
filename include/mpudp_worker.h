@@ -64,5 +64,6 @@ int worker_send_packet(worker_t*, mpudp_packet_t*);
 int worker_send_bcast(worker_t*, mpudp_packet_t*);
 int worker_send_ack(worker_t*, uint32_t);
 int watchdog_check_state(worker_t*);
+int would_block(worker_t*, mpudp_packet_t*);
 void* worker_arq_watcher(void *arg);
 #endif

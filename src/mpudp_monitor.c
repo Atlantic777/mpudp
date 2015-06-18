@@ -116,8 +116,13 @@ void init_monitor(monitor_t *m)
     // init rx buffer
     m->rx_head = 0;
     m->rx_tail = 0;
-    m->tx_num  = 0;
+    m->rx_num  = 0;
+    m->user_expected_id = 0;
     pthread_mutex_init(&m->rx_mx, NULL);
+
+    int i;
+    for(i = 0; i < BUFF_LEN; i++)
+        m->rx_data[i] = NULL;
 
     // init bcast buffer
     /* pthread_mutex_init(&m->bcast_mx, NULL); */

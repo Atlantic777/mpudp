@@ -32,6 +32,7 @@ struct monitor {
     int  rx_head;
     int  rx_tail;
     int  rx_num;
+    int  user_expected_id;
     pthread_mutex_t rx_mx;
 
     mpudp_packet_t *bcast_data;
