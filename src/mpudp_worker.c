@@ -31,8 +31,6 @@ void* worker_tx_thread(void *arg)
             worker_send(w, w->private_tx_buff, SEND_UCAST);
             pthread_mutex_lock(&w->wait_ack_buff_mx);
             w->wait_ack_buff = w->private_tx_buff;
-            /* printf("[%d] - tx thread changed ack waiting buff state to %p\n", w->id, w->wait_ack_buff); */
-            /* w->wait_ack_buff = NULL; */
             w->last_send_time = time(NULL);
             pthread_cond_broadcast(&w->wait_ack_full);
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
@@ -56,20 +54,71 @@ void* worker_rx_thread(void *arg)
     worker_t *w = (worker_t*)arg;
     monitor_t *m = w->m;
     mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
+    mpudp_packet_t *target;
 
     while(1)
     {
         if(worker_recv_packet(w, p))
         {
-            /* printf("[%d] - Got the packet\n", w->id); */
-        }
-        else
-        {
-            /* printf("[%d] - No data... :(\n", w->id); */
-            // Given that there is no data received
-            // And we should send ACK
-            // Then we should rentransmit packet from the ACK buffer
-            // and increment retransmission count
+            if(p->type == MPUDP_CONFIG)
+            {
+                mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
+                mpudp_chars2config(config, p->payload, p->len);
+
+                pthread_mutex_lock(&w->m->remote_config_mx);
+                if(config->id > w->m->remote_config->id)
+                {
+                    printf("[%d] - We have a new config!\n", w->id);
+                    w->m->remote_config = config;
+
+                    pthread_cond_signal(&w->m->remote_config_changed);
+                }
+                pthread_mutex_unlock(&w->m->remote_config_mx);
+
+            }
+            else if(p->type == MPUDP_DATA)
+            {
+                pthread_mutex_lock(&w->m->rx_mx);
+                while(w->m->rx_num >= BUFF_LEN)
+                    pthread_cond_wait(&w->m->rx_not_full, &w->m->rx_mx);
+
+                if((w->m->rx_data[p->id % BUFF_LEN] == NULL) &&
+                        (p->id >= w->m->user_expected_id) &&
+                        (p->id < w->m->user_expected_id+BUFF_LEN))
+                {
+                    target = malloc(sizeof(mpudp_packet_t));
+                    w->m->rx_data[p->id % BUFF_LEN] = target;
+
+                    *target = *p;
+                    target->payload = malloc(sizeof(p->len));
+                    memcpy(target->payload, p->payload, p->len);
+
+                    worker_send_ack(w, p->id);
+                    w->m->rx_num++;
+                }
+                else if(p->id < w->m->user_expected_id)
+                {
+                    // old packet
+                    worker_send_ack(w, p->id);
+                }
+                else
+                {
+                    // droping packet
+                }
+
+                pthread_cond_broadcast(&w->m->rx_has_data);
+                pthread_mutex_unlock(&w->m->rx_mx);
+            }
+            else if(p->type == MPUDP_ACK)
+            {
+                pthread_mutex_lock(&w->wait_ack_buff_mx);
+                if(w->wait_ack_buff != NULL && p->id == w->wait_ack_buff->id)
+                {
+                    w->wait_ack_buff = NULL;
+                    pthread_cond_broadcast(&w->m->tx_has_data);
+                }
+                pthread_mutex_unlock(&w->wait_ack_buff_mx);
+            }
         }
     }
 }
@@ -231,123 +280,22 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
         return 0;
     }
 
-    /* printf("[%d] - frame type %2hhX %2hhX\n", w->id, frame.type[0], frame.type[1]); */
+    ip_packet_t ip_packet;
+    ip_read_packet(&ip_packet, frame.data, frame.data_len);
 
-    char mac[MAC_LEN_S];
-    chars2mac(frame.dst, mac);
-
-    if(memcmp(frame.dst, BCAST_MAC_B, MAC_LEN) == 0)
+    if(ip_get_proto(&ip_packet) != PROTO_UDP)
     {
-        /* printf("[%d] - We got a broadcast!\n", w->id); */
-
-        ip_packet_t ip_packet;
-        ip_read_packet(&ip_packet, frame.data, frame.data_len);
-
-        udp_dgram_t udp_dgram;
-        udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
-
-        mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
-
-        if(p->type == MPUDP_CONFIG)
-        {
-            mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
-            mpudp_chars2config(config, p->payload, p->len);
-
-            pthread_mutex_lock(&w->m->remote_config_mx);
-            if(config->id > w->m->remote_config->id)
-            {
-                printf("[%d] - We have a new config!\n", w->id);
-                w->m->remote_config = config;
-
-                pthread_cond_signal(&w->m->remote_config_changed);
-            }
-            pthread_mutex_unlock(&w->m->remote_config_mx);
-
-        }
-
+        return 0;
     }
-    else if(strncmp(mac, w->src_mac, MAC_LEN_S) == 0)
+
+    udp_dgram_t udp_dgram;
+    udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
+
+    mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+    if(p->type == MPUDP_DATA || p->type == MPUDP_ACK || p->type == MPUDP_CONFIG)
     {
-        // continue decoding ip_packet and mpudp_packet
-        // if packet is ACK, check our buffer, confirm ACK
-        // and remove that packet from ACK waiting list
-        // if ACK is not for our packet, just drop it
-        // other variant is that this is user data
-        // if it's user data, push ACK packet to the TX buffer
-        // and accept this packet (push it to user's RX buffer)
-        // and notify user that there is new data available
-        // Does this mean that we really need a tx buffer for this worker?
-        // Is there any possibility that we got a packet on another iface?
-
-        /* printf("[%d] - The frame is for us %hhu...\n", w->id, frame.type[1]); */
-        ip_packet_t ip_packet;
-        ip_read_packet(&ip_packet, frame.data, frame.data_len);
-
-        if(ip_get_proto(&ip_packet) != PROTO_UDP)
-        {
-            /* printf("[%d] - ip proto: %2hhX\n", w->id, ip_get_proto(&ip_packet)); */
-            /* printf("[%d] - not udp packet, dropping...\n", w->id); */
-            return 0;
-        }
-
-        udp_dgram_t udp_dgram;
-        udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
-
-        mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
-
-        if(p->type == MPUDP_DATA)
-        {
-            /* printf("[%d] - We got data and should send ACK\n", w->id); */
-
-
-            pthread_mutex_lock(&w->m->rx_mx);
-            while(w->m->rx_num >= BUFF_LEN)
-                pthread_cond_wait(&w->m->rx_not_full, &w->m->rx_mx);
-
-            // if we will not block rx buffer
-            // and we didn't already receive this packet
-            // then store new
-            // else just send ack and drop it
-
-            if((w->m->rx_data[p->id % BUFF_LEN] == NULL) && (p->id >= w->m->user_expected_id) && (p->id < w->m->user_expected_id+BUFF_LEN))
-            {
-                target = malloc(sizeof(mpudp_packet_t));
-                w->m->rx_data[p->id % BUFF_LEN] = target;
-
-                *target = *p;
-                target->payload = malloc(sizeof(p->len));
-                memcpy(target->payload, p->payload, p->len);
-
-                worker_send_ack(w, p->id);
-                w->m->rx_num++;
-                printf("[%d] - storing packet %d on %d\n", w->id, p->id, p->id % BUFF_LEN);
-            }
-            else if(p->id < w->m->user_expected_id)
-            {
-                worker_send_ack(w, p->id);
-                printf("[%d] - old packet %d\n", w->id, p->id);
-            }
-            else
-            {
-                printf("[%d] - droping packet %d\n", w->id, p->id);
-            }
-
-            pthread_cond_broadcast(&w->m->rx_has_data);
-            pthread_mutex_unlock(&w->m->rx_mx);
-        }
-        else if(p->type == MPUDP_ACK)
-        {
-            /* printf("[%d] - got ACK %d, should empty ack waiting and notify tx\n", w->id, p->id); */
-
-            pthread_mutex_lock(&w->wait_ack_buff_mx);
-            if(w->wait_ack_buff != NULL && p->id == w->wait_ack_buff->id)
-            {
-                printf("[%d] - we got the right ACK for %d\n", w->id, p->id);
-                w->wait_ack_buff = NULL;
-                pthread_cond_broadcast(&w->m->tx_has_data);
-            }
-            pthread_mutex_unlock(&w->wait_ack_buff_mx);
-        }
+        return 1;
     }
 
     return 0;
