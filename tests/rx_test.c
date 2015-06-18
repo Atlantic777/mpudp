@@ -5,22 +5,22 @@
 
 int next_packet_available(monitor_t *m)
 {
-    printf("Expecting: %d\n", m->user_expected_id);
+    printf("\n\nExpecting: %d\n", m->user_expected_id);
 
     int id = -1, i;
     for(i = 0; i < BUFF_LEN; i++)
     {
-        printf("%d - %p: ", i, m->rx_data[i]);
         if(m->rx_data[i] != NULL)
         {
-            printf("%d ", m->rx_data[i]->id);
             if(m->rx_data[i]->id == m->user_expected_id)
             {
+                printf("%d - %p: ", i, m->rx_data[i]);
+                printf("%d ", m->rx_data[i]->id);
                 printf("MATCHING!");
+                printf("\n");
                 id = i;
             }
         }
-        printf("\n");
     }
 
     return id;

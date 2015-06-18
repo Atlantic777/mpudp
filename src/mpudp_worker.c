@@ -216,6 +216,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
 {
     struct pcap_pkthdr *pkt_header;
     const u_char *pkt_data;
+    mpudp_packet_t *target;
 
     int res = pcap_next_ex(w->if_handle, &pkt_header, &pkt_data);
 
@@ -308,12 +309,23 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
             // then store new
             // else just send ack and drop it
 
-            if((w->m->rx_data[p->id % BUFF_LEN] == NULL) && (p->id >= w->m->user_expected_id))
+            if((w->m->rx_data[p->id % BUFF_LEN] == NULL) && (p->id >= w->m->user_expected_id) && (p->id < w->m->user_expected_id+BUFF_LEN))
             {
-                w->m->rx_data[p->id % BUFF_LEN] = p;
+                target = malloc(sizeof(mpudp_packet_t));
+                w->m->rx_data[p->id % BUFF_LEN] = target;
+
+                *target = *p;
+                target->payload = malloc(sizeof(p->len));
+                memcpy(target->payload, p->payload, p->len);
+
+                worker_send_ack(w, p->id);
                 w->m->rx_num++;
                 printf("[%d] - storing packet %d on %d\n", w->id, p->id, p->id % BUFF_LEN);
+            }
+            else if(p->id < w->m->user_expected_id)
+            {
                 worker_send_ack(w, p->id);
+                printf("[%d] - old packet %d\n", w->id, p->id);
             }
             else
             {
