@@ -107,3 +107,67 @@ int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 
     return 0;
 }
+
+void mpudp_send_packet(monitor_t *m, uint8_t *data, int len)
+{
+    mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
+    p->payload = malloc(sizeof(len));
+    p->len = len;
+
+    pthread_mutex_lock(&m->tx_mx);
+
+    while(m->tx_num >= BUFF_LEN)
+        pthread_cond_wait(&m->tx_not_full, &m->tx_mx);
+
+
+    p->id = m->pkt_counter++;
+    p->type = MPUDP_DATA;
+
+    m->tx_data[m->tx_head] = p;
+    m->tx_num++;
+    m->tx_head = (m->tx_head+1) % BUFF_LEN;
+
+    pthread_cond_broadcast(&m->tx_has_data);
+    pthread_mutex_unlock(&m->tx_mx);
+}
+
+int next_packet_available(monitor_t *m)
+{
+    int id = -1, i;
+    for(i = 0; i < BUFF_LEN; i++)
+    {
+        if(m->rx_data[i] != NULL)
+        {
+            if(m->rx_data[i]->id == m->user_expected_id)
+            {
+                id = i;
+            }
+        }
+    }
+
+    return id;
+}
+
+int mpudp_recv_packet(monitor_t *m, uint8_t **data)
+{
+    mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
+    int id;
+
+    pthread_mutex_lock(&m->rx_mx);
+    while((id = next_packet_available(m)) == -1)
+        pthread_cond_wait(&m->rx_has_data, &m->rx_mx);
+
+    p = m->rx_data[id % BUFF_LEN];
+    m->rx_data[id % BUFF_LEN] = NULL;
+
+    m->rx_num--;
+    m->user_expected_id++;
+
+    *data = malloc(sizeof(p->len));
+    memcpy(*data, p->payload, p->len);
+
+    pthread_cond_broadcast(&m->rx_not_full);
+    pthread_mutex_unlock(&m->rx_mx);
+
+    return p->len;
+}

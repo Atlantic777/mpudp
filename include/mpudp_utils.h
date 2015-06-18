@@ -59,5 +59,8 @@ int mpudp_config2chars(mpudp_config_t*,uint8_t**);
 int mpudp_chars2config(mpudp_config_t*, uint8_t*, int);
 int mpudp_chars2packet(mpudp_packet_t*, uint8_t*, int len);
 int mpudp_packet2chars(mpudp_packet_t*, uint8_t**);
+void mpudp_send_packet(monitor_t*,uint8_t*, int);
+int mpudp_recv_packet(monitor_t*,uint8_t**);
+int next_packet_available(monitor_t*);
 
 #endif
