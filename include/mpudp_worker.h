@@ -9,6 +9,9 @@
 #define WORKER_NOT_CONNECTED 0
 #define WORKER_CONNECTED     1
 
+#define SEND_UCAST 0
+#define SEND_BCAST 1
+
 typedef struct worker worker_t;
 typedef struct monitor monitor_t;
 
@@ -60,8 +63,8 @@ void* worker_rx_thread(void *arg);
 void* worker_tx_watcher_thread(void*arg);
 worker_t* init_worker(int, char*, monitor_t*, float);
 int spawn_worker(worker_t* spawn_worker);
-int worker_send_packet(worker_t*, mpudp_packet_t*);
-int worker_send_bcast(worker_t*, mpudp_packet_t*);
+int worker_sendt(worker_t*, mpudp_packet_t*, int);
+// int worker_send_bcast(worker_t*, mpudp_packet_t*);
 int worker_send_ack(worker_t*, uint32_t);
 int watchdog_check_state(worker_t*);
 int would_block(worker_t*, mpudp_packet_t*);

@@ -24,11 +24,11 @@ void* worker_tx_thread(void *arg)
 
         if(w->private_tx_buff->type == MPUDP_CONFIG)
         {
-            worker_send_bcast(w, w->private_tx_buff);
+            worker_send(w, w->private_tx_buff, SEND_BCAST);
         }
         else if(w->private_tx_buff->type == MPUDP_DATA)
         {
-            worker_send_packet(w, w->private_tx_buff);
+            worker_send(w, w->private_tx_buff, SEND_UCAST);
             pthread_mutex_lock(&w->wait_ack_buff_mx);
             w->wait_ack_buff = w->private_tx_buff;
             /* printf("[%d] - tx thread changed ack waiting buff state to %p\n", w->id, w->wait_ack_buff); */
@@ -40,7 +40,7 @@ void* worker_tx_thread(void *arg)
         else
         {
             // we are sending ACK
-            worker_send_packet(w, w->private_tx_buff);
+            worker_send(w, w->private_tx_buff, SEND_UCAST);
         }
         /* usleep(w->choke); */
 
@@ -353,7 +353,7 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     return 0;
 }
 
-int worker_send_packet(worker_t *w, mpudp_packet_t *p)
+int worker_send(worker_t *w, mpudp_packet_t *p, int type)
 {
     eth_frame_t eth_frame;
     ip_packet_t ip_packet;
@@ -365,9 +365,18 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     int eth_len, ip_len, udp_len;
 
-    eth_build_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
-    ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
-    udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
+    if(type == SEND_UCAST)
+    {
+        eth_build_frame(&eth_frame, w->dst_mac, w->src_mac, ETH_TYPE_IP);
+        ip_build_packet(&ip_packet, w->src_ip, w->dst_ip);
+        udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
+    }
+    else if(type == SEND_BCAST)
+    {
+        eth_build_frame(&eth_frame, w->bcast_mac, w->src_mac, ETH_TYPE_IP);
+        ip_build_packet(&ip_packet, w->src_ip, w->bcast_ip);
+        udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
+    }
 
     uint8_t *payload;
     int len = mpudp_packet2chars(p, &payload);
@@ -377,40 +386,6 @@ int worker_send_packet(worker_t *w, mpudp_packet_t *p)
 
     ip_set_data(&ip_packet, udp_payload, udp_len);
     ip_len = ip_packet2chars(&ip_packet, &ip_payload);
-
-    eth_set_data(&eth_frame, ip_payload, ip_len);
-    eth_len = eth_frame2chars(&eth_frame, &eth_payload);
-
-    pcap_sendpacket(w->if_handle, eth_payload, eth_len);
-
-    return 0;
-}
-
-int worker_send_bcast(worker_t *w, mpudp_packet_t *p)
-{
-    eth_frame_t eth_frame;
-    ip_packet_t ip_packet;
-    udp_dgram_t udp_dgram;
-
-    /* printf("[%d] - sending bcast...\n", w->id); */
-
-    unsigned char *eth_payload, *ip_payload, *udp_payload;
-
-    int eth_len, ip_len, udp_len;
-
-    eth_build_frame(&eth_frame, w->bcast_mac, w->src_mac, ETH_TYPE_IP);
-    ip_build_packet(&ip_packet, w->src_ip, w->bcast_ip);
-    udp_build_dgram_hdr(&udp_dgram, w->src_port, w->dst_port);
-
-    uint8_t *payload;
-    int len = mpudp_packet2chars(p, &payload);
-
-    udp_set_data(&udp_dgram, payload, len);
-    udp_len = udp_dgram2chars(&udp_dgram, &udp_payload);
-
-    ip_set_data(&ip_packet, udp_payload, udp_len);
-    ip_len = ip_packet2chars(&ip_packet, &ip_payload);
-
 
     eth_set_data(&eth_frame, ip_payload, ip_len);
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
