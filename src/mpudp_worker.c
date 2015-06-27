@@ -235,10 +235,20 @@ void* worker_tx_watcher_thread(void *arg)
             pthread_mutex_lock(&w->wait_ack_buff_mx);
             if(w->wait_ack_buff == NULL && w->private_tx_buff == NULL)
             {
-                tmp = m->tx_data[m->tx_tail];
+                if(m->esc_num != 0)
+                {
+                    tmp = m->esc_data[m->esc_tail];
+                    m->esc_tail = (m->esc_tail + 1) % BUFF_LEN;
+                    m->esc_num--;
+                    printf("[%d] - gotcha!\n", w->id);
+                }
+                else
+                {
+                    tmp = m->tx_data[m->tx_tail];
+                    m->tx_num--;
+                    m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
+                }
 
-                m->tx_num--;
-                m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
 
                 pthread_cond_broadcast(&m->tx_not_full);
             }
@@ -379,9 +389,15 @@ int watchdog_check_state(worker_t *w)
 {
     pthread_mutex_lock(&w->private_tx_buff_mx);
     pthread_mutex_lock(&w->wait_ack_buff_mx);
-    int users_data = w->m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED;
-    int bcast_data = w->m->checkin[w->id] == 0;
+
+    int users_data = (w->m->tx_num <= 0) && (w->m->esc_num <= 0);
+    int worker_state = w->state == WORKER_NOT_CONNECTED;
+    users_data |= worker_state;
+
     int tx_transaction = w->private_tx_buff != NULL || w->wait_ack_buff != NULL;
+
+    int bcast_data = w->m->checkin[w->id] == 0;
+
     pthread_mutex_unlock(&w->private_tx_buff_mx);
     pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
@@ -395,6 +411,8 @@ int watchdog_check_state(worker_t *w)
 void* worker_arq_watcher(void *arg)
 {
     worker_t *w = (worker_t*)arg;
+    monitor_t *m = w->m;
+
     struct timeval current_time;
     unsigned long seconds, useconds, difftime;
 
@@ -413,16 +431,26 @@ void* worker_arq_watcher(void *arg)
         useconds = current_time.tv_usec - w->last_send_time.tv_usec;
         difftime = seconds*1000 + useconds/1000;
 
-        if(difftime > 50)
+        if(difftime > 100)
         {
             printf("[%d] - should retransmit ", w->id);
             printf("packet %d for %d time\n", w->wait_ack_buff->id, w->arq_count);
 
-            if(w->arq_count > 5)
+            if(w->arq_count > 10)
             {
                 printf("[%d] - link is dead!\n", w->id);
-                // should empty ack buffer
-                // and announce config change
+                pthread_mutex_lock(&m->tx_mx);
+
+                m->esc_data[m->esc_head] = w->wait_ack_buff;
+                m->esc_head = (m->esc_head + 1) % BUFF_LEN;
+                m->esc_num++;
+
+                w->state = WORKER_NOT_CONNECTED;
+                w->wait_ack_buff = NULL;
+
+                pthread_cond_broadcast(&m->bcast_done);
+                pthread_cond_broadcast(&m->tx_has_data);
+                pthread_mutex_unlock(&m->tx_mx);
             }
 
             pthread_mutex_lock(&w->private_tx_buff_mx);

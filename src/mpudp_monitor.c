@@ -60,7 +60,7 @@ void* monitor_config_announcer(void *arg)
     while(1)
     {
         bcast_push(m, bcast_packet);
-        sleep(5);
+        sleep(2);
     }
 
 }
@@ -120,12 +120,17 @@ void init_monitor(monitor_t *m)
     m->user_expected_id = 0;
     pthread_mutex_init(&m->rx_mx, NULL);
 
+    // init esc_buffer
+    m->esc_head = 0;
+    m->esc_tail = 0;
+    m->esc_num  = 0;
+    pthread_mutex_init(&m->esc_mx, NULL);
+
     int i;
     for(i = 0; i < BUFF_LEN; i++)
         m->rx_data[i] = NULL;
 
     // init bcast buffer
-    /* pthread_mutex_init(&m->bcast_mx, NULL); */
     pthread_mutex_init(&m->local_config_mx, NULL);
     pthread_mutex_init(&m->remote_config_mx, NULL);
 
@@ -136,7 +141,6 @@ void init_monitor(monitor_t *m)
     pthread_cond_init(&m->rx_has_data, NULL);
     pthread_cond_init(&m->rx_not_full, NULL);
 
-    /* pthread_cond_init(&m->bcast_has_data, NULL); */
     pthread_cond_init(&m->bcast_done, NULL);
 
     pthread_cond_init(&m->local_config_changed, NULL);

@@ -35,14 +35,14 @@ struct monitor {
     int  user_expected_id;
     pthread_mutex_t rx_mx;
 
+    mpudp_packet_t *esc_data[BUFF_LEN];
+    int esc_head;
+    int esc_tail;
+    int esc_num;
+    pthread_mutex_t esc_mx;
+
     mpudp_packet_t *bcast_data;
     uint8_t *checkin;
-    // pthread_mutex_t bcast_mx; // don't use this
-
-    // probably not needed
-    // mpudp_packet_t *bcast_recv;
-    // pthread_mutex_t convifg_mx;
-    // pthread_cond_t got_new_config;
 
     pthread_cond_t tx_has_data;
     pthread_cond_t tx_not_full;
@@ -50,7 +50,6 @@ struct monitor {
     pthread_cond_t rx_has_data;
     pthread_cond_t rx_not_full;
 
-    // pthread_cond_t bcast_has_data; // don't use this
     pthread_cond_t bcast_done;
 
     mpudp_config_t *local_config;
