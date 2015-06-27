@@ -7,7 +7,6 @@
 #include "pcap_utils.h"
 #include <pcap.h>
 #include <string.h>
-#include <time.h>
 
 void* worker_tx_thread(void *arg)
 {
@@ -30,8 +29,19 @@ void* worker_tx_thread(void *arg)
         {
             worker_send(w, w->private_tx_buff, SEND_UCAST);
             pthread_mutex_lock(&w->wait_ack_buff_mx);
-            w->wait_ack_buff = w->private_tx_buff;
-            w->last_send_time = time(NULL);
+
+            if(w->wait_ack_buff != w->private_tx_buff)
+            {
+                w->wait_ack_buff = w->private_tx_buff;
+                w->arq_count = 0;
+            }
+            else
+            {
+                w->arq_count++;
+            }
+
+            gettimeofday(&w->last_send_time, NULL);
+
             pthread_cond_broadcast(&w->wait_ack_full);
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
         }
@@ -40,11 +50,13 @@ void* worker_tx_thread(void *arg)
             // we are sending ACK
             worker_send(w, w->private_tx_buff, SEND_UCAST);
         }
+
         /* usleep(w->choke); */
 
         w->private_tx_buff = NULL;
 
         pthread_cond_broadcast(&w->tx_empty);
+        pthread_cond_broadcast(&m->tx_has_data);
         pthread_mutex_unlock(&w->private_tx_buff_mx);
     }
 }
@@ -179,7 +191,9 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     w->wait_ack_buff = NULL;
 
-    w->last_send_time = 0;
+    gettimeofday(&w->last_send_time, NULL);
+
+    w->arq_count = 0;
 
     return w;
 }
@@ -201,13 +215,12 @@ void* worker_tx_watcher_thread(void *arg)
 
     while(1)
     {
-        // fetch to tmp
         pthread_mutex_lock(&m->tx_mx);
-        /* while( (m->tx_num <= 0 || w->state == WORKER_NOT_CONNECTED) && m->checkin[w->id] == 0) */
         while(watchdog_check_state(w))
         {
             pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
         }
+
 
         if(m->checkin[w->id] == 1)
         {
@@ -223,9 +236,6 @@ void* worker_tx_watcher_thread(void *arg)
             if(w->wait_ack_buff == NULL && w->private_tx_buff == NULL)
             {
                 tmp = m->tx_data[m->tx_tail];
-
-                /* printf("[%d] - we can get new user's data %d\n", w->id, tmp->id); */
-
 
                 m->tx_num--;
                 m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
@@ -376,7 +386,8 @@ int watchdog_check_state(worker_t *w)
     pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
     /* printf("[%d] - watcher state: users_data %d - transaction %d - bcast-data %d\n", */
-            /* w->id, users_data, tx_transaction, bcast_data); */
+    /*         w->id, users_data, tx_transaction, bcast_data); */
+    /* printf("[%d] - tx num %d - worker state - %d\n", w->id, w->m->tx_num, w->state); */
 
     return (users_data || tx_transaction) && bcast_data;
 }
@@ -384,11 +395,12 @@ int watchdog_check_state(worker_t *w)
 void* worker_arq_watcher(void *arg)
 {
     worker_t *w = (worker_t*)arg;
-    uint8_t current_time;
+    struct timeval current_time;
+    unsigned long seconds, useconds, difftime;
 
     while(1)
     {
-        /* printf("[%d] - ARQ alive\n", w->id); */
+        /* printf("[%d] - ARQ alive, arq buff %p\n", w->id, w->wait_ack_buff); */
         pthread_mutex_lock(&w->wait_ack_buff_mx);
         while(w->wait_ack_buff == NULL)
         {
@@ -396,16 +408,22 @@ void* worker_arq_watcher(void *arg)
         }
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-        // ack buffer is really full
-        // I'll check it's timestamp
-        // And if I should retransmit, I will bump ARQ cnt
-        // And push it to tx
+        gettimeofday(&current_time, NULL);
+        seconds  = current_time.tv_sec  - w->last_send_time.tv_sec;
+        useconds = current_time.tv_usec - w->last_send_time.tv_usec;
+        difftime = seconds*1000 + useconds/1000;
 
-        current_time = time(NULL);
-
-        if((current_time - w->last_send_time) > 1)
+        if(difftime > 50)
         {
-            printf("[%d] - should retransmit\n", w->id);
+            printf("[%d] - should retransmit ", w->id);
+            printf("packet %d for %d time\n", w->wait_ack_buff->id, w->arq_count);
+
+            if(w->arq_count > 5)
+            {
+                printf("[%d] - link is dead!\n", w->id);
+                // should empty ack buffer
+                // and announce config change
+            }
 
             pthread_mutex_lock(&w->private_tx_buff_mx);
             while(w->private_tx_buff != NULL)
@@ -419,6 +437,6 @@ void* worker_arq_watcher(void *arg)
         }
 
 
-        sleep(1);
+        usleep(25000);
     }
 }

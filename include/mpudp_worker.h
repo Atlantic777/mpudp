@@ -5,6 +5,7 @@
 #include "mpudp_utils.h"
 #include "mpudp_monitor.h"
 #include <pcap.h>
+#include <sys/time.h>
 
 #define WORKER_NOT_CONNECTED 0
 #define WORKER_CONNECTED     1
@@ -48,7 +49,8 @@ struct worker {
 
     char name[6];
 
-    uint8_t last_send_time;
+    struct timeval last_send_time;
+    uint8_t arq_count;
 
     pthread_mutex_t config_mx;
     pthread_mutex_t private_tx_buff_mx;
