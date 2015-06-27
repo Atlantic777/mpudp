@@ -52,17 +52,18 @@ void* monitor_config_announcer(void *arg)
 
     uint8_t *payload;
 
-    mpudp_packet_t *bcast_packet;
-    int len = mpudp_config2chars(&config, &payload);
-    mpudp_prepare_packet(&bcast_packet, payload, len);
 
-    bcast_packet->type = MPUDP_CONFIG;
+    mpudp_packet_t *bcast_packet;
 
     while(1)
     {
         int num_ifaces = pcapu_find_all_devs(&iface_names_list);
         mpudp_build_config(num_ifaces, iface_names_list, &config);
         config.id = 0;
+
+        int len = mpudp_config2chars(&config, &payload);
+        mpudp_prepare_packet(&bcast_packet, payload, len);
+        bcast_packet->type = MPUDP_CONFIG;
         /* mpudp_print_config(&config); */
 
         bcast_push(m, bcast_packet);
