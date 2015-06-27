@@ -12,8 +12,8 @@ void dummy_recv(monitor_t *m)
     {
         len = mpudp_recv_packet(m, &data);
 
-        if((i % 15) == 0)
-            usleep(100000);
+        /* if((i % 15) == 0) */
+        /*     usleep(100000); */
 
         printf("Got packet %d with %d bytes: %s\n", i, len, data);
     }

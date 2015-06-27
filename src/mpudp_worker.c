@@ -72,7 +72,6 @@ void* worker_rx_thread(void *arg)
     {
         if(worker_recv_packet(w, p))
         {
-            printf("[%d] - got a packet!\n", w->id);
             if(p->type == MPUDP_CONFIG)
             {
                 mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
@@ -81,7 +80,7 @@ void* worker_rx_thread(void *arg)
                 pthread_mutex_lock(&w->m->remote_config_mx);
                 if(config->id > w->m->remote_config->id)
                 {
-                    printf("[%d] - We have a new config!\n", w->id);
+                    /* printf("[%d] - We have a new config!\n", w->id); */
                     w->m->remote_config = config;
 
                     pthread_cond_signal(&w->m->remote_config_changed);
@@ -91,6 +90,7 @@ void* worker_rx_thread(void *arg)
             }
             else if(p->type == MPUDP_DATA)
             {
+                /* printf("[%d] - got data packet %d!\n", w->id, p->id); */
                 pthread_mutex_lock(&w->m->rx_mx);
                 while(w->m->rx_num >= BUFF_LEN)
                     pthread_cond_wait(&w->m->rx_not_full, &w->m->rx_mx);
@@ -99,6 +99,7 @@ void* worker_rx_thread(void *arg)
                         (p->id >= w->m->user_expected_id) &&
                         (p->id < w->m->user_expected_id+BUFF_LEN))
                 {
+                    /* printf("[%d] - accepting new packet %d\n", w->id, p->id); */
                     target = malloc(sizeof(mpudp_packet_t));
                     w->m->rx_data[p->id % BUFF_LEN] = target;
 
@@ -113,10 +114,12 @@ void* worker_rx_thread(void *arg)
                 {
                     // old packet
                     worker_send_ack(w, p->id);
+                    /* printf("[%d] - confirming old packet %d\n", w->id, p->id); */
                 }
                 else
                 {
                     // droping packet
+                    /* printf("[%d] - droping packet: %d\n", w->id, p->id); */
                 }
 
                 pthread_cond_broadcast(&w->m->rx_has_data);
@@ -179,7 +182,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 5, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 1, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
