@@ -146,6 +146,9 @@ int pcapu_find_all_devs(char ***dev_arr)
 {
     pcap_if_t *alldevs, *d;
     char eb[PCAP_ERRBUF_SIZE];
+    FILE *f;
+    char path[256];
+    int carrier_state;
 
     int cursor = 0;
 
@@ -156,11 +159,20 @@ int pcapu_find_all_devs(char ***dev_arr)
 
     for(d = alldevs; d != NULL; d = d->next)
     {
+
         if(strstr(d->name, "wlan") && d->name[4] > '0')
         {
-            tmp[cursor] = malloc(5);
-            strcpy(tmp[cursor], d->name);
-            cursor++;
+            sprintf(path, "%s%s/carrier", SYSFS_DEV_PATH, d->name);
+            f = fopen(path, "r");
+            fscanf(f, "%d", &carrier_state);
+            fclose(f);
+
+            if(carrier_state == 1)
+            {
+                tmp[cursor] = malloc(5);
+                strcpy(tmp[cursor], d->name);
+                cursor++;
+            }
         }
     }
 
