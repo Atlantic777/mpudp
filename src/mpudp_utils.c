@@ -203,3 +203,33 @@ void mpudp_print_iface_desc(mpudp_if_desc_t *if_desc)
     puts(chars2ip(if_desc->ip, ip));
     printf("Port: %d\n", if_desc->port);
 }
+
+int mpudp_config_different(mpudp_config_t *c1, mpudp_config_t *c2)
+{
+    if(c1->num_if != c2->num_if)
+    {
+        return 1;
+    }
+
+    int a, b, match = 0;
+
+    for(a = 0; a < c1->num_if; a++)
+    {
+        for(b = 0; b < c2->num_if; b++)
+        {
+            if(c1->if_list[a].ip == c2->if_list[b].ip)
+            {
+                match++;
+            }
+        }
+    }
+
+    if(match == c1->num_if)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+}

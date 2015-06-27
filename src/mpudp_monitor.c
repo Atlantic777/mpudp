@@ -47,24 +47,29 @@ void* monitor_config_announcer(void *arg)
     monitor_t *m = (monitor_t*)arg;
 
     char **iface_names_list;
-    mpudp_config_t config;
-
+    mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
+    config->id = -1;
 
     uint8_t *payload;
-
 
     mpudp_packet_t *bcast_packet;
 
     while(1)
     {
         int num_ifaces = pcapu_find_all_devs(&iface_names_list);
-        mpudp_build_config(num_ifaces, iface_names_list, &config);
-        config.id = 0;
+        mpudp_build_config(num_ifaces, iface_names_list, config);
 
-        int len = mpudp_config2chars(&config, &payload);
+        if(mpudp_config_different(m->local_config, config))
+        {
+            config->id = m->local_config->id + 1;
+            m->local_config = config;
+            config = malloc(sizeof(mpudp_config_t));
+            printf("We have new local config: %d\n", m->local_config->id);
+        }
+
+        int len = mpudp_config2chars(m->local_config, &payload);
         mpudp_prepare_packet(&bcast_packet, payload, len);
         bcast_packet->type = MPUDP_CONFIG;
-        /* mpudp_print_config(&config); */
 
         bcast_push(m, bcast_packet);
         sleep(2);
@@ -155,6 +160,8 @@ void init_monitor(monitor_t *m)
 
     // config handles
     m->local_config = malloc(sizeof(mpudp_config_t));
+    m->local_config->id = -1;
+    m->local_config->num_if = 0;
 
     m->remote_config = malloc(sizeof(mpudp_config_t));
     m->remote_config->id = -1;

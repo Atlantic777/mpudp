@@ -52,17 +52,22 @@ struct mpudp_if_desc {
     uint16_t port;
 };
 
-int mpudp_prepare_packet(mpudp_packet_t**, uint8_t*, int);
-int mpudp_config_matcher();
+
 void mpudp_build_config(int, char**, mpudp_config_t*);
-int mpudp_config2chars(mpudp_config_t*,uint8_t**);
-int mpudp_chars2config(mpudp_config_t*, uint8_t*, int);
-int mpudp_chars2packet(mpudp_packet_t*, uint8_t*, int len);
-int mpudp_packet2chars(mpudp_packet_t*, uint8_t**);
-void mpudp_send_packet(monitor_t*,uint8_t*, int);
-int mpudp_recv_packet(monitor_t*,uint8_t**);
-int next_packet_available(monitor_t*);
+int  mpudp_config_different(mpudp_config_t*, mpudp_config_t*);
+
+int  mpudp_config2chars(mpudp_config_t*,uint8_t**);
+int  mpudp_chars2config(mpudp_config_t*, uint8_t*, int);
+
 void mpudp_print_config(mpudp_config_t*);
 void mpudp_print_iface_desc(mpudp_if_desc_t*);
+
+int  mpudp_chars2packet(mpudp_packet_t*, uint8_t*, int len);
+int  mpudp_packet2chars(mpudp_packet_t*, uint8_t**);
+int  mpudp_prepare_packet(mpudp_packet_t**, uint8_t*, int);
+
+void mpudp_send_packet(monitor_t*,uint8_t*, int);
+int  mpudp_recv_packet(monitor_t*,uint8_t**);
+int  next_packet_available(monitor_t*);
 
 #endif
