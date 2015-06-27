@@ -95,20 +95,33 @@ void* monitor_config_receiver(void *arg)
         last_config_id = m->remote_config->id;
         pthread_mutex_unlock(&m->remote_config_mx);
 
-        // do the matching
-        int i;
-        for(i = 0; i < 2; i++)
+        int i, j;
+        uint32_t src_mask, dst_mask;
+
+        for(i = 0; i < m->local_config->num_if; i++)
         {
-            // stop workers
             pthread_mutex_lock(&m->workers[i]->config_mx);
 
-            // change their configs
-            chars2ip(m->remote_config->if_list[i].ip, m->workers[i]->dst_ip);
-            chars2mac(m->remote_config->if_list[i].mac, m->workers[i]->dst_mac);
-            m->workers[i]->dst_port = m->remote_config->if_list[i].port;
-            m->workers[i]->state = WORKER_CONNECTED;
+            src_mask = m->local_config->if_list[i].ip & ~0xFF;
 
-            // release workers
+            for(j = 0; j < m->remote_config->num_if; j++)
+            {
+                dst_mask = m->remote_config->if_list[j].ip & ~0xFF;
+
+                if(src_mask == dst_mask)
+                {
+                    printf("found a match! %hhu - %hhu\n", src_mask >> 8, dst_mask >> 8);
+                    chars2ip(m->remote_config->if_list[j].ip, m->workers[i]->dst_ip);
+                    chars2mac(m->remote_config->if_list[j].mac, m->workers[i]->dst_mac);
+                    m->workers[i]->dst_port = m->remote_config->if_list[j].port;
+                    m->workers[i]->state = WORKER_CONNECTED;
+                    break;
+                }
+                else
+                {
+                    m->workers[i]->state = WORKER_NOT_CONNECTED;
+                }
+            }
             pthread_mutex_unlock(&m->workers[i]->config_mx);
         }
 

@@ -72,6 +72,7 @@ void* worker_rx_thread(void *arg)
     {
         if(worker_recv_packet(w, p))
         {
+            printf("[%d] - got a packet!\n", w->id);
             if(p->type == MPUDP_CONFIG)
             {
                 mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
