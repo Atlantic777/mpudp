@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "mpudp_monitor.h"
 #include "net_utils.h"
+#include "pcap_utils.h"
 
 void init_buffer(mpudp_buff_t *buff)
 {
@@ -30,20 +31,30 @@ int mpudp_prepare_packet(mpudp_packet_t **packet, uint8_t *data, int len)
     return len;
 }
 
-void mpudp_build_config(monitor_t *m, mpudp_config_t *config)
+void mpudp_build_config(int n, char **iface_names_list, mpudp_config_t *config)
 {
-    config->num_if = m->num_workers;
-
+    config->num_if = n;
     config->if_list = malloc(sizeof(mpudp_if_desc_t)*config->num_if);
+    char *tmp;
+    pcap_if_t *dev;
 
     int i;
     for(i = 0; i < config->num_if; i++)
     {
-        strcpy(config->if_list[i].name, m->workers[i]->name);
-        mac2chars(m->workers[i]->src_mac, config->if_list[i].mac);
-        ip2chars(m->workers[i]->src_ip, &config->if_list[i].ip);
+        /* strcpy(config->if_list[i].name, m->workers[i]->name); */
+        /* mac2chars(m->workers[i]->src_mac, config->if_list[i].mac); */
+        /* ip2chars(m->workers[i]->src_ip, &config->if_list[i].ip); */
+        pcapu_find_dev_by_name(&dev, iface_names_list[i]);
 
-        config->if_list[i].port = m->workers[i]->src_port;
+        strcpy(config->if_list[i].name, iface_names_list[i]);
+
+        tmp = pcapu_read_if_mac_s(iface_names_list[i], NULL);
+        mac2chars(tmp, config->if_list[i].mac);
+
+        tmp = pcapu_read_if_ip_s(dev, NULL);
+        ip2chars(tmp, &config->if_list[i].ip);
+
+        config->if_list[i].port = 8880+i;
     }
 }
 
@@ -170,4 +181,25 @@ int mpudp_recv_packet(monitor_t *m, uint8_t **data)
     pthread_mutex_unlock(&m->rx_mx);
 
     return p->len;
+}
+
+void mpudp_print_config(mpudp_config_t *c)
+{
+    int i;
+    for(i = 0; i < c->num_if; i++)
+    {
+        mpudp_print_iface_desc(&c->if_list[i]);
+        printf("\n");
+    }
+}
+
+void mpudp_print_iface_desc(mpudp_if_desc_t *if_desc)
+{
+    char mac[MAC_LEN_S];
+    char ip[15];
+
+    puts(if_desc->name);
+    puts(chars2mac(if_desc->mac, mac));
+    puts(chars2ip(if_desc->ip, ip));
+    printf("Port: %d\n", if_desc->port);
 }

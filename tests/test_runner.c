@@ -106,12 +106,12 @@ int main() {
                 test_udp_read_dgram);
 
     /******* MPUDP utils ******/
-    CU_add_test(mpudp_utils_suite, "Build a MPUDP config",
-                test_mpudp_build_config);
-    CU_add_test(mpudp_utils_suite, "MPUDP config to bytes",
-                test_mpudp_config2chars);
-    CU_add_test(mpudp_utils_suite, "MPUDP byte string to config",
-                test_mpudp_chars2config);
+    /* CU_add_test(mpudp_utils_suite, "Build a MPUDP config", */
+    /*             test_mpudp_build_config); */
+    /* CU_add_test(mpudp_utils_suite, "MPUDP config to bytes", */
+    /*             test_mpudp_config2chars); */
+    /* CU_add_test(mpudp_utils_suite, "MPUDP byte string to config", */
+    /*             test_mpudp_chars2config); */
 
     /******* test runner setup ******/
     CU_basic_set_mode(CU_BRM_VERBOSE);

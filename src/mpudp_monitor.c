@@ -46,9 +46,10 @@ void* monitor_config_announcer(void *arg)
 {
     monitor_t *m = (monitor_t*)arg;
 
-
+    char **iface_names_list;
     mpudp_config_t config;
-    mpudp_build_config(m, &config);
+
+
     uint8_t *payload;
 
     mpudp_packet_t *bcast_packet;
@@ -59,6 +60,11 @@ void* monitor_config_announcer(void *arg)
 
     while(1)
     {
+        int num_ifaces = pcapu_find_all_devs(&iface_names_list);
+        mpudp_build_config(num_ifaces, iface_names_list, &config);
+        config.id = 0;
+        /* mpudp_print_config(&config); */
+
         bcast_push(m, bcast_packet);
         sleep(2);
     }
@@ -74,7 +80,7 @@ void* monitor_config_receiver(void *arg)
     while(1)
     {
         pthread_mutex_lock(&m->remote_config_mx);
-        while(m->remote_config->id == last_config_id)
+        while(m->remote_config->id <= last_config_id)
         {
             pthread_cond_wait(&m->remote_config_changed, &m->remote_config_mx);
         }

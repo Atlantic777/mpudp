@@ -123,6 +123,7 @@ void* worker_rx_thread(void *arg)
             }
             else if(p->type == MPUDP_ACK)
             {
+                printf("[%d] - got ACK for %d\n", w->id, p->id);
                 pthread_mutex_lock(&w->wait_ack_buff_mx);
                 if(w->wait_ack_buff != NULL && p->id == w->wait_ack_buff->id)
                 {
