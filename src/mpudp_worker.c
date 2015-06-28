@@ -7,6 +7,18 @@
 #include "pcap_utils.h"
 #include <pcap.h>
 #include <string.h>
+#include <time.h>
+
+void timestamp()
+{
+    struct timeval tv;
+    struct tm *t;
+
+    gettimeofday(&tv, NULL);
+    t = localtime(&tv.tv_sec);
+
+    printf("[%02d:%03d] ", t->tm_sec, (int)tv.tv_usec/1000);
+}
 
 void* worker_tx_thread(void *arg)
 {
@@ -41,6 +53,9 @@ void* worker_tx_thread(void *arg)
             }
 
             gettimeofday(&w->last_send_time, NULL);
+
+            /* timestamp(); */
+            /* printf("[%d] - sent packet: %d\n", w->id, w->private_tx_buff->id); */
 
             pthread_cond_broadcast(&w->wait_ack_full);
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
@@ -127,10 +142,15 @@ void* worker_rx_thread(void *arg)
             }
             else if(p->type == MPUDP_ACK)
             {
+                /* timestamp(); */
+                /* printf("[%d] - got ACK %d\n", w->id, p->id); */
+
                 pthread_mutex_lock(&w->wait_ack_buff_mx);
                 if(w->wait_ack_buff != NULL && p->id == w->wait_ack_buff->id)
                 {
                     w->wait_ack_buff = NULL;
+                    /* timestamp(); */
+                    /* printf("[%d] - ACK is now empty: %d\n", w->id, p->id); */
                     pthread_cond_broadcast(&w->m->tx_has_data);
                 }
                 pthread_mutex_unlock(&w->wait_ack_buff_mx);
@@ -227,6 +247,8 @@ void* worker_tx_watcher_thread(void *arg)
             pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
         }
 
+        /* timestamp(); */
+        /* printf("[%d] - tx watcher woke up\n", w->id); */
 
         if(m->checkin[w->id] == 1)
         {
