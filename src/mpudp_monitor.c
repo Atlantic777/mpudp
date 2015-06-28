@@ -56,6 +56,12 @@ void* monitor_config_announcer(void *arg)
 
     while(1)
     {
+        if(m->workers[0]->state == WORKER_CONNECTED)
+        {
+            puts("Breaking announcer loop\n");
+            break;
+        }
+
         int num_ifaces = pcapu_find_all_devs(&iface_names_list);
         mpudp_build_config(num_ifaces, iface_names_list, config);
 
