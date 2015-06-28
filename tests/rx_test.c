@@ -15,7 +15,7 @@ void dummy_recv(monitor_t *m)
         /* if((i % 15) == 0) */
         /*     usleep(100000); */
 
-        printf("Got packet %d with %d bytes: %s\n", i, len, data);
+        printf("Got packet %d, buff state:%d\n", i, m->rx_num);
     }
 }
 
