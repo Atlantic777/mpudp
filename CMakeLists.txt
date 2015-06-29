@@ -84,3 +84,6 @@ target_link_libraries(t_worker_init pthread monitor)
 
 add_executable(t_rx_test tests/rx_test.c)
 target_link_libraries(t_rx_test monitor pthread)
+
+add_executable(t_file_tx_test tests/file_tx_test.c)
+target_link_libraries(t_file_tx_test monitor pthread)
