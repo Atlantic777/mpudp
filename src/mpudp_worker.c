@@ -358,7 +358,7 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
-    /* printf("[%d] - sending packet... %d\n", w->id, p->id); */
+    /* printf("[%d] - sending packet... %d: %s\n", w->id, p->id, p->payload); */
 
     int eth_len, ip_len, udp_len;
 

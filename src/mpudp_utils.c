@@ -123,6 +123,7 @@ void mpudp_send_packet(monitor_t *m, uint8_t *data, int len)
 {
     mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
     p->payload = malloc(sizeof(len));
+    memcpy(p->payload, data, len);
     p->len = len;
 
     pthread_mutex_lock(&m->tx_mx);
