@@ -24,11 +24,13 @@ struct worker {
     pthread_t arq_watcher_id;
 
     mpudp_packet_t *private_tx_buff;
+
     mpudp_packet_t *wait_ack_buff[BUFF_LEN];
-    uint8_t arq_count[BUFF_LEN];
-    struct timeval last_send_time[BUFF_LEN];
+    uint8_t         arq_count[BUFF_LEN];
+    struct timeval  last_send_time[BUFF_LEN];
+    uint8_t         ack_checkin[BUFF_LEN];
+    int8_t         ack_num, ack_head, ack_tail;
     pthread_mutex_t wait_ack_buff_mx;
-    uint8_t ack_num;
 
     monitor_t *m;
 
@@ -75,4 +77,6 @@ void* worker_arq_watcher(void *arg);
 int find_empty(mpudp_packet_t**);
 int find_oldest(worker_t*);
 void dump_ack_buff(mpudp_packet_t **);
+int slide_window(worker_t*);
+int get_difftime(struct timeval *, struct timeval*);
 #endif
