@@ -51,6 +51,7 @@ void* worker_tx_thread(void *arg)
         }
 
         /* usleep(w->choke); */
+        /* sleep(1); */
 
         w->private_tx_buff = NULL;
 
@@ -197,7 +198,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 10, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 5, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -430,21 +431,6 @@ int watchdog_check_state(worker_t *w)
     int tx_transaction = w->private_tx_buff != NULL || w->ack_num >= BUFF_LEN;
 
     int bcast_data = w->m->checkin[w->id] == 0;
-    /*  */
-    /* printf("[%d] - \nusers data %d\n bcast data %d\n tx trans   %d\n", */
-    /*         w->id, users_data, bcast_data, tx_transaction); */
-    /* printf("private tx buff: %p\n", w->private_tx_buff); */
-    /* printf("[%d] - ACK num: %d\n", w->id, w->ack_num); */
-
-    /* if(find_oldest(w) != -1) */
-    /* { */
-    /*     #<{(| printf("[%d] - STAHP!\n", w->id); |)}># */
-    /*     return 1; */
-    /* } */
-    /* else */
-    /* { */
-    /*     #<{(| printf("[%d] - clear to wake up\n", w->id); |)}># */
-    /* } */
 
     return (users_data && bcast_data) || tx_transaction;
 }
@@ -465,29 +451,6 @@ void* worker_arq_watcher(void *arg)
     {
         pthread_mutex_lock(&w->wait_ack_buff_mx);
 
-        /* oldest = find_oldest(w); */
-
-        /* if(oldest != -1) */
-        /* { */
-        /*     timestamp(); */
-        /*     printf("[%d] - should retransmit %d\n", w->id, w->wait_ack_buff[oldest]->id); */
-        /*     pthread_mutex_lock(&w->private_tx_buff_mx); */
-        /*     #<{(| printf("[%d] - ARQ thread got the lock\n", w->id); |)}># */
-        /*     while(w->private_tx_buff != NULL) */
-        /*     { */
-        /*         pthread_cond_wait(&w->tx_empty, &w->private_tx_buff_mx); */
-        /*     } */
-        /*  */
-        /*     #<{(| printf("[%d] - ARQ pushed\n", w->id); |)}># */
-        /*  */
-        /*     gettimeofday(&w->last_send_time[oldest], NULL); */
-        /*     w->private_tx_buff = w->wait_ack_buff[oldest]; */
-        /*  */
-        /*     pthread_cond_broadcast(&w->tx_ready); */
-        /*     pthread_mutex_unlock(&w->private_tx_buff_mx); */
-        /* } */
-        /*  */
-
         gettimeofday(&current_time, NULL);
 
         for(i = 0; i < BUFF_LEN; i++)
@@ -498,13 +461,9 @@ void* worker_arq_watcher(void *arg)
             p = w->wait_ack_buff[idx];
             difftime_ms = get_difftime(&current_time, &w->last_send_time[idx]);
 
-            if(p != NULL && (difftime_ms > 100))
+            if(p != NULL && (difftime_ms > 25))
             {
                 printf("[%d] - should retransmit %d\n", w->id, p->id);
-                /* printf("[%d] - tail is %d idx is %d\n", w->id, w->ack_tail, idx); */
-                /* dump_ack_buff(w->wait_ack_buff); */
-                /* printf("\n"); */
-                /* fflush(NULL); */
 
                 pthread_mutex_lock(&w->private_tx_buff_mx);
                 while(w->private_tx_buff != NULL)
@@ -637,22 +596,12 @@ int slide_window(worker_t *w)
         }
         else
         {
-            /* printf("[%d] - SLIDING!!! head: %d tail: %d num: %d\n", w->id, w->ack_head, w->ack_tail, */
-            /*         w->ack_num); */
             break;
         }
 
         if(w->ack_num == 0)
             return 1;
     }
-
-    /* printf("[%d] - ACK num is: %d but was: %d\n", w->id, w->ack_num, old); */
-
-    /* if(retval) */
-    /* { */
-    /*     printf("[%d] - SLIDING!!! head: %d tail: %d\n", w->id, w->ack_head, w->ack_tail); */
-    /*     dump_ack_buff(w->wait_ack_buff); */
-    /* } */
 
     return retval;
 }
