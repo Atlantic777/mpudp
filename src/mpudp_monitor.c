@@ -70,6 +70,8 @@ void* monitor_config_announcer(void *arg)
             m->local_config = config;
             config = malloc(sizeof(mpudp_config_t));
             printf("We have new local config: %d\n", m->local_config->id);
+
+            mpudp_print_config(m->local_config);
         }
 
         int len = mpudp_config2chars(m->local_config, &payload);
@@ -99,6 +101,8 @@ void* monitor_config_receiver(void *arg)
         puts("Config really changed!");
         last_config_id = m->remote_config->id;
         pthread_mutex_unlock(&m->remote_config_mx);
+
+        mpudp_print_config(m->remote_config);
 
         int i, j;
         uint32_t src_mask, dst_mask;
