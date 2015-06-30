@@ -11,7 +11,7 @@
 #define MPUDP_DATA   1
 #define MPUDP_ACK    2
 
-#define MPUDP_IFACE_DESC_LEN (6 + MAC_LEN + 4 + 2)
+#define MPUDP_IFACE_DESC_LEN sizeof(mpudp_if_desc_t)
 #define MPUDP_CONFIG_PREFIX_LEN 2
 
 typedef struct mpudp_buff mpudp_buff_t;

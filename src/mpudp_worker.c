@@ -9,16 +9,6 @@
 #include <string.h>
 #include <time.h>
 
-void dump_packet(mpudp_packet_t* p)
-{
-    int i;
-    for(i = 0; i < 32; i++)
-    {
-        printf("%02x ", p->payload[i]);
-    }
-    printf("\n");
-}
-
 void timestamp()
 {
     struct timeval tv;
@@ -120,22 +110,29 @@ void* worker_rx_thread(void *arg)
                     w->m->rx_data[p->id % BUFF_LEN] = target;
 
                     *target = *p;
-                    target->payload = malloc(sizeof(p->len));
-                    memcpy(target->payload, p->payload, p->len);
+                    /* printf("target len: %d\n", target->len); */
+
+                    /* target->payload = malloc(sizeof(p->len)); */
+                    /* printf("target: %p\n", target->payload); */
+                    /* printf("packet: %p\n", p->payload); */
+                    target->payload = p->payload;
+
+                    /* memcpy(target->payload, p->payload, p->len); */
 
                     worker_send_ack(w, p->id);
                     w->m->rx_num++;
+
                 }
                 else if(p->id < w->m->user_expected_id)
                 {
                     // old packet
                     worker_send_ack(w, p->id);
-                    /* printf("[%d] - confirming old packet %d\n", w->id, p->id); */
+                    printf("[%d] - confirming old packet %d\n", w->id, p->id);
                 }
                 else
                 {
                     // droping packet
-                    /* printf("[%d] - droping packet: %d\n", w->id, p->id); */
+                    printf("[%d] - droping packet: %d\n", w->id, p->id);
                 }
 
                 pthread_cond_broadcast(&w->m->rx_has_data);
