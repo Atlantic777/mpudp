@@ -409,6 +409,14 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
 
     pcap_sendpacket(w->if_handle, eth_payload, eth_len);
 
+    free(udp_dgram.data);
+    free(ip_packet.payload);
+    free(eth_frame.data);
+
+    free(eth_payload);
+    free(ip_payload);
+    free(udp_payload);
+
     return 0;
 }
 
@@ -443,7 +451,6 @@ int watchdog_check_state(worker_t *w)
 
     /* printf("[%d] - tx watcher got locks\n", w->id); */
 
-    puts("here");
     int users_data = (w->m->tx_num <= 0) && (w->m->esc_num <= 0);
     int worker_state = w->state == WORKER_NOT_CONNECTED;
     users_data |= worker_state;
@@ -451,8 +458,7 @@ int watchdog_check_state(worker_t *w)
     // TODO: use new ACK buff
     int tx_transaction = w->private_tx_buff != NULL || w->ack_num >= BUFF_LEN;
 
-    int bcast_data = w->m->checkin[w->id] == 0;
-    puts("there");
+    int bcast_data = (w->m->checkin[w->id] == 0);
 
     return (users_data && bcast_data) || tx_transaction;
 }
@@ -485,7 +491,7 @@ void* worker_arq_watcher(void *arg)
             p = w->wait_ack_buff[idx];
             difftime_ms = get_difftime(&current_time, &w->last_send_time[idx]);
 
-            if(p != NULL && (difftime_ms > 200))
+            if(p != NULL && (difftime_ms > 500))
             {
                 printf("[%d] - should retransmit %d\n", w->id, p->id);
 
@@ -605,7 +611,7 @@ int slide_window(worker_t *w)
 
     int old = w->ack_num;
 
-    for(i = 0; i < BUFF_LEN; i++)
+    for(i = 0; i < old; i++)
     {
         p = w->wait_ack_buff[w->ack_tail];
 

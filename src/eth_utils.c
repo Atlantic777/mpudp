@@ -44,10 +44,10 @@ int eth_frame_len(eth_frame_t *frame)
 
 int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
 {
-    *buff = malloc(eth_frame_len(frame));
+    *buff = calloc(1, eth_frame_len(frame));
 
-    memcpy(*buff, frame->dst, MAC_LEN);
-    memcpy(*buff+MAC_LEN, frame->src, MAC_LEN);
+    memcpy(*buff,           frame->dst, MAC_LEN);
+    memcpy(*buff+MAC_LEN,   frame->src, MAC_LEN);
     memcpy(*buff+2*MAC_LEN, frame->type, 2);
     memcpy(*buff+ETH_FRAME_PREFIX_LEN, frame->data, frame->data_len);
 
@@ -56,8 +56,8 @@ int eth_frame2chars(eth_frame_t *frame, unsigned char **buff)
 
 int eth_read_frame(eth_frame_t *frame, unsigned char *data, int len)
 {
-    memcpy(frame->dst, data, MAC_LEN);
-    memcpy(frame->src, data+MAC_LEN, MAC_LEN);
+    memcpy(frame->dst,  data,           MAC_LEN);
+    memcpy(frame->src,  data+MAC_LEN,   MAC_LEN);
     memcpy(frame->type, data+2*MAC_LEN, 2);
 
     frame->data_len = len-ETH_FRAME_PREFIX_LEN;

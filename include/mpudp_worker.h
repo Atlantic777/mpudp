@@ -29,7 +29,7 @@ struct worker {
     uint8_t         arq_count[BUFF_LEN];
     struct timeval  last_send_time[BUFF_LEN];
     uint8_t         ack_checkin[BUFF_LEN];
-    int8_t         ack_num, ack_head, ack_tail;
+    int32_t         ack_num, ack_head, ack_tail;
     pthread_mutex_t wait_ack_buff_mx;
 
     monitor_t *m;
