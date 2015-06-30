@@ -160,7 +160,7 @@ int pcapu_find_all_devs(char ***dev_arr)
     for(d = alldevs; d != NULL; d = d->next)
     {
 
-        if(strstr(d->name, "wlan") && d->name[4] > '0')
+        if(strstr(d->name, "wlan") && d->name[4] >= '0')
         {
             sprintf(path, "%s%s/carrier", SYSFS_DEV_PATH, d->name);
             f = fopen(path, "r");

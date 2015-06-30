@@ -7,6 +7,22 @@
 #include "net_utils.h"
 #include "pcap_utils.h"
 
+void dump_packet(mpudp_packet_t *p)
+{
+    int i;
+    printf("%d:    ", p->id);
+    for(i = 0; i < 16; i++)
+    {
+        printf("%02x ", p->payload[i]);
+
+        if(i == 7)
+        {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
+
 void init_buffer(mpudp_buff_t *buff)
 {
     buff->head = 0;
@@ -99,22 +115,22 @@ int mpudp_chars2config(mpudp_config_t *config, uint8_t *data, int len)
 
 int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
 {
-    *payload = malloc(1+4+4+packet->len);
+    *payload = malloc(4+4+4+packet->len);
     uint8_t *dst = *payload;
 
-    memcpy(dst, packet, 9);
+    memcpy(dst, packet, 12);
 
     if(packet->len > 0)
-        memcpy(dst+9, packet->payload, packet->len);
+        memcpy(dst+12, packet->payload, packet->len);
 
-    return 9+packet->len;
+    return 12+packet->len;
 }
 
 int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 {
-    memcpy(packet, payload, 9);
+    memcpy(packet, payload, 12);
     packet->payload = malloc(packet->len);
-    memcpy(packet->payload, payload+9, packet->len);
+    memcpy(packet->payload, payload+12, packet->len);
 
     return 0;
 }
@@ -174,8 +190,11 @@ int mpudp_recv_packet(monitor_t *m, uint8_t **data)
     m->rx_num--;
     m->user_expected_id++;
 
-    *data = malloc(sizeof(p->len));
-    memcpy(*data, p->payload, p->len);
+    /* printf("packet len: %d\n", p->len); */
+
+    /* *data = malloc(sizeof(p->len)); */
+    /* memcpy(*data, p->payload, p->len); */
+    *data = p->payload;
 
     pthread_cond_broadcast(&m->rx_not_full);
     pthread_mutex_unlock(&m->rx_mx);

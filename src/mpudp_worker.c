@@ -119,22 +119,29 @@ void* worker_rx_thread(void *arg)
                     w->m->rx_data[p->id % BUFF_LEN] = target;
 
                     *target = *p;
-                    target->payload = malloc(sizeof(p->len));
-                    memcpy(target->payload, p->payload, p->len);
+                    /* printf("target len: %d\n", target->len); */
+
+                    /* target->payload = malloc(sizeof(p->len)); */
+                    /* printf("target: %p\n", target->payload); */
+                    /* printf("packet: %p\n", p->payload); */
+                    target->payload = p->payload;
+
+                    /* memcpy(target->payload, p->payload, p->len); */
 
                     worker_send_ack(w, p->id);
                     w->m->rx_num++;
+
                 }
                 else if(p->id < w->m->user_expected_id)
                 {
                     // old packet
                     worker_send_ack(w, p->id);
-                    /* printf("[%d] - confirming old packet %d\n", w->id, p->id); */
+                    printf("[%d] - confirming old packet %d\n", w->id, p->id);
                 }
                 else
                 {
                     // droping packet
-                    /* printf("[%d] - droping packet: %d\n", w->id, p->id); */
+                    printf("[%d] - droping packet: %d\n", w->id, p->id);
                 }
 
                 pthread_cond_broadcast(&w->m->rx_has_data);
@@ -202,7 +209,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 1024, 0, 1, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
