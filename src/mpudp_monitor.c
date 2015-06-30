@@ -16,16 +16,21 @@ void* monitor_thread(void *arg)
     m->workers = malloc(sizeof(worker_t*)*num_ifaces);
 
     for(i = 0; i < num_ifaces; i++)
+    {
         m->workers[i] = init_worker(i, iface_names_list[i], m, 0.5*i+1);
+    }
+
 
     m->num_workers = num_ifaces;
     m->checkin = malloc(sizeof(int)*m->num_workers);
+
 
     for(i = 0; i < num_ifaces; i++)
         m->checkin[i] = 0;
 
     for(i = 0; i < num_ifaces; i++)
         spawn_worker(m->workers[i]);
+
 
     // spawn config monitoring threads
     pthread_create(&m->config_announcer_id, NULL, monitor_config_announcer, m);

@@ -13,11 +13,12 @@ void send_file(monitor_t *m)
 
     FILE *f = fopen(FILENAME, "r");
 
+    int i;
 
     while(n_read = fread(data, 1, PKT_LEN, f))
     {
         mpudp_send_packet(m, data, n_read);
-        printf("User sent %d bytes, cnt: %d\n", n_read, cnt);
+        /* printf("User sent %d bytes, cnt: %d\n", n_read, cnt); */
         cnt++;
     }
 

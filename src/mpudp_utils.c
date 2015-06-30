@@ -99,22 +99,34 @@ int mpudp_chars2config(mpudp_config_t *config, uint8_t *data, int len)
 
 int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
 {
-    *payload = malloc(1+4+4+packet->len);
+    *payload = malloc(4+4+4+packet->len);
     uint8_t *dst = *payload;
 
-    memcpy(dst, packet, 9);
+    uint32_t pkt_len;
+
+    memcpy(dst, packet, 12);
 
     if(packet->len > 0)
-        memcpy(dst+9, packet->payload, packet->len);
+        memcpy(dst+12, packet->payload, packet->len);
 
-    return 9+packet->len;
+    /* int i; */
+    /* for(i = 0; i < 32; i++) */
+    /* { */
+    /*     printf("%02x ", packet->payload[i]); */
+    /* } */
+    /* printf("\n"); */
+
+    return 12+packet->len;
 }
 
 int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 {
-    memcpy(packet, payload, 9);
+    memcpy(packet, payload, 12);
+    /* printf("packet len: %d\n", packet->len); */
+
     packet->payload = malloc(packet->len);
-    memcpy(packet->payload, payload+9, packet->len);
+    memcpy(packet->payload, payload+12, packet->len);
+
 
     return 0;
 }
@@ -122,11 +134,12 @@ int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 void mpudp_send_packet(monitor_t *m, uint8_t *data, int len)
 {
     mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
-    p->payload = malloc(sizeof(len));
+    p->payload = malloc(len);
     memcpy(p->payload, data, len);
     p->len = len;
 
     pthread_mutex_lock(&m->tx_mx);
+
 
     while(m->tx_num >= BUFF_LEN)
         pthread_cond_wait(&m->tx_not_full, &m->tx_mx);
@@ -138,6 +151,13 @@ void mpudp_send_packet(monitor_t *m, uint8_t *data, int len)
     m->tx_data[m->tx_head] = p;
     m->tx_num++;
     m->tx_head = (m->tx_head+1) % BUFF_LEN;
+
+    /* int i; */
+    /* for(i = 0; i < 32; i++) */
+    /* { */
+    /*     printf("%02x ", m->tx_data[m->tx_tail]->payload[i]); */
+    /* } */
+    /* printf("\n"); */
 
     pthread_cond_broadcast(&m->tx_has_data);
     pthread_mutex_unlock(&m->tx_mx);

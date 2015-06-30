@@ -144,7 +144,10 @@ void pcapu_print_all_devs()
 
 int pcapu_find_all_devs(char ***dev_arr)
 {
-    pcap_if_t *alldevs, *d;
+    pcap_if_t *alldevs = malloc(sizeof(pcap_if_t));
+    memset(alldevs, 0, sizeof(pcap_if_t));
+
+    pcap_if_t *d = NULL;
     char eb[PCAP_ERRBUF_SIZE];
     FILE *f;
     char path[256];
@@ -169,7 +172,7 @@ int pcapu_find_all_devs(char ***dev_arr)
 
             if(carrier_state == 1)
             {
-                tmp[cursor] = malloc(5);
+                tmp[cursor] = malloc(6);
                 strcpy(tmp[cursor], d->name);
                 cursor++;
             }

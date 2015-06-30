@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "net_utils.h"
 
-#define BUFF_LEN 10
+#define BUFF_LEN 500
 
 #define MPUDP_CONFIG 0
 #define MPUDP_DATA   1
