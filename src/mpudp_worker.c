@@ -9,6 +9,16 @@
 #include <string.h>
 #include <time.h>
 
+void dump_packet(mpudp_packet_t* p)
+{
+    int i;
+    for(i = 0; i < 32; i++)
+    {
+        printf("%02x ", p->payload[i]);
+    }
+    printf("\n");
+}
+
 void timestamp()
 {
     struct timeval tv;
@@ -36,6 +46,8 @@ void* worker_tx_thread(void *arg)
         /* timestamp(); */
         /* printf("[%d] - tx thread wakeup\n", w->id); */
 
+        /* dump_packet(w->private_tx_buff); */
+
         if(w->private_tx_buff->type == MPUDP_CONFIG)
         {
             worker_send(w, w->private_tx_buff, SEND_BCAST);
@@ -43,6 +55,8 @@ void* worker_tx_thread(void *arg)
         else if(w->private_tx_buff->type == MPUDP_DATA)
         {
             worker_send(w, w->private_tx_buff, SEND_UCAST);
+
+            /* dump_packet(w->private_tx_buff); */
         }
         else
         {
@@ -169,6 +183,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->id = id;
     w->choke = choke*1000000;
 
+
     w->private_tx_buff = NULL;
 
     char *tmp;
@@ -203,6 +218,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->dst_ip  = malloc(IP_LEN_S_MAX);
     w->dst_mac = malloc(MAC_LEN_S);
 
+
     char errbuf[PCAP_ERRBUF_SIZE];
 
     w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
@@ -219,6 +235,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     pthread_mutex_init(&w->wait_ack_buff_mx, NULL);
     w->ack_num = 0;
 
+
     int i;
     for(i = 0; i < BUFF_LEN; i++)
     {
@@ -226,6 +243,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
         w->arq_count[i] = 0;
         gettimeofday(&w->last_send_time[i], NULL);
     }
+
 
     w->ack_head = 0;
     w->ack_tail = 0;
@@ -262,6 +280,7 @@ void* worker_tx_watcher_thread(void *arg)
 
         /* timestamp(); */
         /* printf("[%d] - tx watcher can fetch\n", w->id); */
+        /* dump_packet(m->tx_data[m->tx_tail]); */
 
         if(m->checkin[w->id] == 1)
         {
@@ -365,7 +384,7 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
 
     unsigned char *eth_payload, *ip_payload, *udp_payload;
 
-    /* printf("[%d] - sending packet... %d\n", w->id, p->id); */
+    /* printf("[%d] - sending packet... %d len: %d\n", w->id, p->id, p->len); */
 
     int eth_len, ip_len, udp_len;
 
@@ -384,6 +403,7 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
 
     uint8_t *payload;
     int len = mpudp_packet2chars(p, &payload);
+    /* printf("Packet len: %d\n", *(uint32_t*)payload+5); */
 
     udp_set_data(&udp_dgram, payload, len);
     udp_len = udp_dgram2chars(&udp_dgram, &udp_payload);
@@ -395,6 +415,14 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
     eth_len = eth_frame2chars(&eth_frame, &eth_payload);
 
     pcap_sendpacket(w->if_handle, eth_payload, eth_len);
+
+    free(udp_dgram.data);
+    free(ip_packet.payload);
+    free(eth_frame.data);
+
+    free(eth_payload);
+    free(ip_payload);
+    free(udp_payload);
 
     return 0;
 }
@@ -437,7 +465,7 @@ int watchdog_check_state(worker_t *w)
     // TODO: use new ACK buff
     int tx_transaction = w->private_tx_buff != NULL || w->ack_num >= BUFF_LEN;
 
-    int bcast_data = w->m->checkin[w->id] == 0;
+    int bcast_data = (w->m->checkin[w->id] == 0);
 
     return (users_data && bcast_data) || tx_transaction;
 }
@@ -456,6 +484,8 @@ void* worker_arq_watcher(void *arg)
 
     while(1)
     {
+        /* printf("[%d] - ARQ watcher alive\n", w->id); */
+
         pthread_mutex_lock(&w->wait_ack_buff_mx);
 
         gettimeofday(&current_time, NULL);
@@ -468,7 +498,7 @@ void* worker_arq_watcher(void *arg)
             p = w->wait_ack_buff[idx];
             difftime_ms = get_difftime(&current_time, &w->last_send_time[idx]);
 
-            if(p != NULL && (difftime_ms > 25))
+            if(p != NULL && (difftime_ms > 500))
             {
                 printf("[%d] - should retransmit %d\n", w->id, p->id);
 
@@ -588,7 +618,7 @@ int slide_window(worker_t *w)
 
     int old = w->ack_num;
 
-    for(i = 0; i < BUFF_LEN; i++)
+    for(i = 0; i < old; i++)
     {
         p = w->wait_ack_buff[w->ack_tail];
 
