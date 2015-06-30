@@ -9,16 +9,6 @@
 #include <string.h>
 #include <time.h>
 
-void dump_packet(mpudp_packet_t* p)
-{
-    int i;
-    for(i = 0; i < 32; i++)
-    {
-        printf("%02x ", p->payload[i]);
-    }
-    printf("\n");
-}
-
 void timestamp()
 {
     struct timeval tv;

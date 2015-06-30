@@ -118,8 +118,6 @@ int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
     *payload = malloc(4+4+4+packet->len);
     uint8_t *dst = *payload;
 
-    uint32_t pkt_len;
-
     memcpy(dst, packet, 12);
 
     if(packet->len > 0)
