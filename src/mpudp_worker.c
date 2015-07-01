@@ -151,6 +151,7 @@ void* worker_rx_thread(void *arg)
                     {
                         /* timestamp(); */
                         /* printf("[%d] - found matching ACK %d\n", w->id, p->id); */
+                        free(w->wait_ack_buff[i]->payload);
                         w->wait_ack_buff[i] = NULL;
                         if(slide_window(w))
                         {
@@ -211,7 +212,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 2, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -356,7 +357,12 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     udp_dgram_t udp_dgram;
     udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
 
-    mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+    res = mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+    if(res == -1)
+    {
+        return 0;
+    }
 
     if(p->type == MPUDP_DATA || p->type == MPUDP_ACK || p->type == MPUDP_CONFIG)
     {
@@ -413,6 +419,7 @@ int worker_send(worker_t *w, mpudp_packet_t *p, int type)
     free(eth_payload);
     free(ip_payload);
     free(udp_payload);
+    free(payload);
 
     return 0;
 }
@@ -488,7 +495,7 @@ void* worker_arq_watcher(void *arg)
             p = w->wait_ack_buff[idx];
             difftime_ms = get_difftime(&current_time, &w->last_send_time[idx]);
 
-            if(p != NULL && (difftime_ms > 500))
+            if(p != NULL && (difftime_ms > 1000))
             {
                 printf("[%d] - should retransmit %d\n", w->id, p->id);
 
@@ -509,7 +516,7 @@ void* worker_arq_watcher(void *arg)
 
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-        usleep(5000);
+        usleep(10000);
     }
 }
 
