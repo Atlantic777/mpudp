@@ -132,7 +132,7 @@ int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 
     if(packet->len < 0)
     {
-        // silly len
+        // silly malloc bug
         return -1;
     }
 
