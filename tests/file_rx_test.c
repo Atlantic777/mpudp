@@ -2,6 +2,7 @@
 #include "mpudp_utils.h"
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define FILENAME "libre36.pdf"
 
@@ -19,9 +20,11 @@ void recv_file(monitor_t *m)
         if(len > 0)
             fwrite(data, 1, len, f);
 
+        free(data);
+
         if(len > 0 && len < 1024)
             break;
-        printf("Got packet %d with %d bytes\n", i, len);
+        /* printf("Got packet %d with %d bytes\n", i, len); */
     }
 
     printf("End of transmission");

@@ -211,7 +211,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 15, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -356,7 +356,15 @@ int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
     udp_dgram_t udp_dgram;
     udp_read_dgram(&udp_dgram, ip_packet.payload, ip_get_len(&ip_packet));
 
-    mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+    res = mpudp_chars2packet(p, udp_dgram.data, udp_dgram.len - UDP_PREFIX_LEN);
+
+    free(frame.data);
+    free(ip_packet.payload);
+    free(udp_dgram.data);
+
+    if(res == -1)
+        return 0;
 
     if(p->type == MPUDP_DATA || p->type == MPUDP_ACK || p->type == MPUDP_CONFIG)
     {
@@ -509,7 +517,7 @@ void* worker_arq_watcher(void *arg)
 
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-        usleep(5000);
+        usleep(100000);
     }
 }
 
