@@ -130,7 +130,7 @@ int mpudp_chars2packet(mpudp_packet_t *packet, uint8_t *payload, int len)
 {
     memcpy(packet, payload, 12);
 
-    if(packet->len < 0)
+    if(packet->len < 0 || packet->type < 0 || packet->type > 2)
     {
         // silly malloc bug
         return -1;
