@@ -79,4 +79,5 @@ int find_oldest(worker_t*);
 void dump_ack_buff(mpudp_packet_t **);
 int slide_window(worker_t*);
 int get_difftime(struct timeval *, struct timeval*);
+void shutdown_worker(worker_t*);
 #endif

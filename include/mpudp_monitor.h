@@ -35,7 +35,7 @@ struct monitor {
     int  user_expected_id;
     pthread_mutex_t rx_mx;
 
-    mpudp_packet_t *esc_data[BUFF_LEN];
+    mpudp_packet_t *esc_data[BUFF_LEN*2];
     int esc_head;
     int esc_tail;
     int esc_num;
@@ -72,5 +72,7 @@ void* monitor_config_receiver(void*);
 void init_monitor(monitor_t *);
 void bcast_push(monitor_t*, mpudp_packet_t*);
 int bcast_empty(monitor_t*);
+void reconfigure_workers(monitor_t*);
+void match_workers(monitor_t*);
 
 #endif

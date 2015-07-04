@@ -73,6 +73,7 @@ void* worker_rx_thread(void *arg)
     monitor_t *m = w->m;
     mpudp_packet_t *p = malloc(sizeof(mpudp_packet_t));
     mpudp_packet_t *target;
+    int res;
 
     while(1)
     {
@@ -81,7 +82,10 @@ void* worker_rx_thread(void *arg)
             if(p->type == MPUDP_CONFIG)
             {
                 mpudp_config_t *config = malloc(sizeof(mpudp_config_t));
-                mpudp_chars2config(config, p->payload, p->len);
+                res = mpudp_chars2config(config, p->payload, p->len);
+
+                if(res == -1)
+                    continue;
 
                 pthread_mutex_lock(&w->m->remote_config_mx);
                 if(config->id > w->m->remote_config->id)
@@ -153,6 +157,8 @@ void* worker_rx_thread(void *arg)
                         /* printf("[%d] - found matching ACK %d\n", w->id, p->id); */
                         free(w->wait_ack_buff[i]->payload);
                         w->wait_ack_buff[i] = NULL;
+                        w->arq_count[i] = 0;
+
                         if(slide_window(w))
                         {
                             /* printf("[%d] - tx watcher notified\n", w->id); */
@@ -212,7 +218,7 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
 
     char errbuf[PCAP_ERRBUF_SIZE];
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 15, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -255,7 +261,7 @@ void* worker_tx_watcher_thread(void *arg)
 {
     worker_t *w = (worker_t*)arg;
     monitor_t *m = w->m;
-    mpudp_packet_t *tmp;
+    mpudp_packet_t *tmp, *esc_tmp;
     int ack_target;
 
     while(1)
@@ -265,6 +271,7 @@ void* worker_tx_watcher_thread(void *arg)
         {
             pthread_mutex_unlock(&w->private_tx_buff_mx);
             pthread_mutex_unlock(&w->wait_ack_buff_mx);
+            pthread_mutex_unlock(&m->esc_mx);
             pthread_cond_wait(&m->tx_has_data, &m->tx_mx);
             /* printf("[%d] - tx watcher woke up\n", w->id); */
         }
@@ -275,6 +282,7 @@ void* worker_tx_watcher_thread(void *arg)
 
         if(m->checkin[w->id] == 1)
         {
+            // just send broadcast
             tmp = m->bcast_data;
 
             m->checkin[w->id] = 0;
@@ -284,47 +292,41 @@ void* worker_tx_watcher_thread(void *arg)
         }
         else
         {
-            // TODO: fix this to use new ACK buff
-            if(w->ack_num < BUFF_LEN && w->private_tx_buff == NULL)
+            // we are sending either escape or new data
+            if(m->esc_num > 0)
             {
-                if(m->esc_num != 0)
-                {
-                    tmp = m->esc_data[m->esc_tail];
-                    m->esc_tail = (m->esc_tail + 1) % BUFF_LEN;
-                    m->esc_num--;
-                    printf("[%d] - gotcha!\n", w->id);
-
-                }
-                else
-                {
-                    tmp = m->tx_data[m->tx_tail];
-                    m->tx_num--;
-                    m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
-                }
-
-                // TODO: use new ACK buff, fill it here
-                /* printf("[%d] - updated ACK num to %2d", w->id, w->ack_num); */
-                /* printf(" for packet %d\n", tmp->id); */
-
-                ack_target = w->ack_head;
-                w->wait_ack_buff[ack_target] = tmp;
-                w->arq_count[ack_target] = 0;
-                gettimeofday(&w->last_send_time[ack_target], NULL);
-                w->ack_head = (w->ack_head + 1) % BUFF_LEN;
-                w->ack_num++;
-
-                w->private_tx_buff = tmp;
-                pthread_cond_signal(&w->tx_ready);
-                pthread_cond_broadcast(&m->tx_not_full);
+                // get escape packet
+                tmp = m->esc_data[m->esc_tail];
+                m->esc_tail = (m->esc_tail + 1) % (BUFF_LEN*2);
+                m->esc_num--;
+                printf("[%d] - gotcha! %d\n", w->id, tmp->id);
             }
             else
             {
-                printf("[%d] - waiting for ACK, can't get new data\n", w->id);
+                // if we are sending regular data
+                tmp = m->tx_data[m->tx_tail];
+                m->tx_num--;
+                m->tx_tail = (m->tx_tail+1) % BUFF_LEN;
             }
+            /* printf("[%d] - updated ACK num to %2d", w->id, w->ack_num); */
+            /* printf(" for packet %d\n", tmp->id); */
+
+            ack_target = w->ack_head;
+
+            w->wait_ack_buff[ack_target] = tmp;
+            w->ack_head = (w->ack_head + 1) % BUFF_LEN;
+            w->ack_num++;
+            w->arq_count[ack_target] = 0;
+            gettimeofday(&w->last_send_time[ack_target], NULL);
+
+            w->private_tx_buff = tmp;
+            pthread_cond_signal(&w->tx_ready);
+            pthread_cond_broadcast(&m->tx_not_full);
         }
         pthread_mutex_unlock(&m->tx_mx);
         pthread_mutex_unlock(&w->private_tx_buff_mx);
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
+        pthread_mutex_unlock(&m->esc_mx);
     }
 }
 int worker_recv_packet(worker_t *w, mpudp_packet_t *p)
@@ -454,30 +456,40 @@ int watchdog_check_state(worker_t *w)
 
     pthread_mutex_lock(&w->wait_ack_buff_mx);
     pthread_mutex_lock(&w->private_tx_buff_mx);
+    pthread_mutex_lock(&w->m->esc_mx);
 
     /* printf("[%d] - tx watcher got locks\n", w->id); */
 
-    int users_data = (w->m->tx_num <= 0) && (w->m->esc_num <= 0);
-    int worker_state = w->state == WORKER_NOT_CONNECTED;
-    users_data |= worker_state;
-
-    // TODO: use new ACK buff
-    int tx_transaction = w->private_tx_buff != NULL || w->ack_num >= BUFF_LEN;
-
+    int users_data = (w->m->tx_num <= 0);
+    int esc_data = (w->m->esc_num <= 0);
     int bcast_data = (w->m->checkin[w->id] == 0);
 
-    return (users_data && bcast_data) || tx_transaction;
+    int ack_free = w->ack_num >= BUFF_LEN;
+    int fetch_user_data = users_data || ack_free;
+    int fetch_esc_data  = esc_data   || ack_free;
+
+    int private_tx = w->private_tx_buff != NULL;
+    int worker_state = w->state == WORKER_NOT_CONNECTED;
+
+    int has_data = (fetch_user_data && bcast_data && fetch_esc_data);
+    int can_send = (private_tx || worker_state);
+
+    /* printf("[%d] - user: %d, bcast %d, esc_data %d, private_tx %d\n", */
+    /*         w->id, fetch_user_data, bcast_data, esc_data, private_tx); */
+
+    return has_data || can_send;
 }
 
 void* worker_arq_watcher(void *arg)
 {
-    worker_t *w = (worker_t*)arg;
+    worker_t  *w = (worker_t*)arg;
     monitor_t *m = w->m;
     struct timeval current_time;
     int difftime_ms;
     int idx;
 
     int i, oldest;
+    int flag = 0;
 
     mpudp_packet_t *p;
 
@@ -485,21 +497,42 @@ void* worker_arq_watcher(void *arg)
     {
         /* printf("[%d] - ARQ watcher alive\n", w->id); */
 
+        flag = 0;
+
+        if(w->state == WORKER_NOT_CONNECTED)
+        {
+            printf("[%d] - still not connected\n", w->id);
+            sleep(1);
+            continue;
+        }
+
         pthread_mutex_lock(&w->wait_ack_buff_mx);
 
         gettimeofday(&current_time, NULL);
 
         for(i = 0; i < BUFF_LEN; i++)
         {
-            /* idx = (w->ack_tail + i) % BUFF_LEN; */
-            idx = w->ack_tail;
+            idx = (w->ack_tail + i) % BUFF_LEN;
+            /* idx = w->ack_tail; */
 
             p = w->wait_ack_buff[idx];
             difftime_ms = get_difftime(&current_time, &w->last_send_time[idx]);
 
-            if(p != NULL && (difftime_ms > 1000))
+            if(p != NULL && (difftime_ms > 5000))
             {
                 printf("[%d] - should retransmit %d\n", w->id, p->id);
+                flag = 1;
+
+                if(w->arq_count[idx] > 6)
+                {
+                    printf("[%d] - link is dead!\n", w->id);
+                    /* shutdown_worker(w); */
+                    pthread_mutex_unlock(&w->wait_ack_buff_mx);
+                    reconfigure_workers(m);
+                    continue;
+                }
+
+                w->arq_count[idx]++;
 
                 pthread_mutex_lock(&w->private_tx_buff_mx);
                 while(w->private_tx_buff != NULL)
@@ -518,7 +551,10 @@ void* worker_arq_watcher(void *arg)
 
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
-        usleep(100000);
+        if(flag == 0)
+            usleep(1000000);
+        else
+            usleep(10000);
     }
 }
 
@@ -640,4 +676,42 @@ int slide_window(worker_t *w)
     }
 
     return retval;
+}
+
+void shutdown_worker(worker_t *w)
+{
+    int i, idx;
+    mpudp_packet_t *p;
+    monitor_t *m = w->m;
+
+    pthread_mutex_lock(&m->esc_mx);
+
+    for(i = 0; i < BUFF_LEN; i++)
+    {
+        idx = (w->ack_tail + i) % BUFF_LEN;
+        p = w->wait_ack_buff[idx];
+        w->wait_ack_buff[idx] = NULL;
+
+
+        if(p != NULL)
+        {
+            /* printf("[%d] - dumping %d\n", w->id, p->id); */
+
+            m->esc_data[m->esc_head] = p;
+            m->esc_num++;
+            m->esc_head = (m->esc_head + 1) % BUFF_LEN;
+        }
+    }
+
+    pthread_mutex_lock(&m->tx_mx);
+    pthread_cond_broadcast(&m->tx_has_data);
+    pthread_mutex_unlock(&m->tx_mx);
+
+    pthread_mutex_unlock(&m->esc_mx);
+
+    w->ack_tail = 0;
+    w->ack_head = 0;
+    w->ack_num  = 0;
+
+    w->state = WORKER_NOT_CONNECTED;
 }

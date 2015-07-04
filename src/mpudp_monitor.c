@@ -72,6 +72,8 @@ void* monitor_config_announcer(void *arg)
             printf("We have new local config: %d\n", m->local_config->id);
 
             mpudp_print_config(m->local_config);
+
+            reconfigure_workers(m);
         }
 
         int len = mpudp_config2chars(m->local_config, &payload);
@@ -104,39 +106,44 @@ void* monitor_config_receiver(void *arg)
 
         mpudp_print_config(m->remote_config);
 
-        int i, j;
-        uint32_t src_mask, dst_mask;
-
-        for(i = 0; i < m->local_config->num_if; i++)
-        {
-            pthread_mutex_lock(&m->workers[i]->config_mx);
-
-            src_mask = m->local_config->if_list[i].ip & ~0xFF;
-
-            for(j = 0; j < m->remote_config->num_if; j++)
-            {
-                dst_mask = m->remote_config->if_list[j].ip & ~0xFF;
-
-                if(src_mask == dst_mask)
-                {
-                    printf("found a match! %hhu - %hhu\n", src_mask >> 8, dst_mask >> 8);
-                    chars2ip(m->remote_config->if_list[j].ip, m->workers[i]->dst_ip);
-                    chars2mac(m->remote_config->if_list[j].mac, m->workers[i]->dst_mac);
-                    m->workers[i]->dst_port = m->remote_config->if_list[j].port;
-                    m->workers[i]->state = WORKER_CONNECTED;
-                    break;
-                }
-                else
-                {
-                    m->workers[i]->state = WORKER_NOT_CONNECTED;
-                }
-            }
-            pthread_mutex_unlock(&m->workers[i]->config_mx);
-        }
-
-        pthread_cond_broadcast(&m->tx_has_data);
+        match_workers(m);
     }
 
+}
+
+void match_workers(monitor_t *m)
+{
+    int i, j;
+    uint32_t src_mask, dst_mask;
+
+    for(i = 0; i < m->local_config->num_if; i++)
+    {
+        pthread_mutex_lock(&m->workers[i]->config_mx);
+
+        src_mask = m->local_config->if_list[i].ip & ~0xFF;
+
+        for(j = 0; j < m->remote_config->num_if; j++)
+        {
+            dst_mask = m->remote_config->if_list[j].ip & ~0xFF;
+
+            if(src_mask == dst_mask)
+            {
+                printf("found a match! %hhu - %hhu\n", src_mask >> 8, dst_mask >> 8);
+                chars2ip(m->remote_config->if_list[j].ip, m->workers[i]->dst_ip);
+                chars2mac(m->remote_config->if_list[j].mac, m->workers[i]->dst_mac);
+                m->workers[i]->dst_port = m->remote_config->if_list[j].port;
+                m->workers[i]->state = WORKER_CONNECTED;
+                break;
+            }
+            else
+            {
+                m->workers[i]->state = WORKER_NOT_CONNECTED;
+            }
+        }
+        pthread_mutex_unlock(&m->workers[i]->config_mx);
+    }
+
+    pthread_cond_broadcast(&m->tx_has_data);
 }
 
 void init_monitor(monitor_t *m)
@@ -161,6 +168,10 @@ void init_monitor(monitor_t *m)
     pthread_mutex_init(&m->esc_mx, NULL);
 
     int i;
+    for(i = 0; i < BUFF_LEN*2; i++)
+        m->esc_data[i] = NULL;
+
+
     for(i = 0; i < BUFF_LEN; i++)
         m->rx_data[i] = NULL;
 
@@ -223,4 +234,131 @@ void bcast_push(monitor_t *m, mpudp_packet_t *p)
     /* pthread_mutex_unlock(&m->bcast_mx); */
     pthread_cond_broadcast(&m->tx_has_data);
     pthread_mutex_unlock(&m->tx_mx);
+}
+
+void reconfigure_workers(monitor_t *m)
+{
+    worker_t *w[2], *nw = NULL;
+    mpudp_packet_t *tmp;
+
+    // stop workers
+    int i;
+    for(i = 0; i < m->num_workers; i++)
+    {
+        printf("Shutting down: %d\n", i);
+        m->workers[i]->state = WORKER_NOT_CONNECTED;
+        w[i] = m->workers[i];
+    }
+
+    // fill escape buffer
+    pthread_mutex_lock(&m->workers[0]->wait_ack_buff_mx);
+    pthread_mutex_lock(&m->workers[1]->wait_ack_buff_mx);
+    pthread_mutex_lock(&m->esc_mx);
+
+    int last_id = 0;
+
+    printf("First %d Second %d\n", w[0]->ack_num, w[1]->ack_num);
+    for(i = 0; i < BUFF_LEN*2; i++)
+    {
+        if(w[0]->wait_ack_buff[w[0]->ack_tail] == NULL)
+        {
+            w[0]->ack_tail = (w[0]->ack_tail + 1) % BUFF_LEN;
+            continue;
+        }
+
+        if(w[1]->wait_ack_buff[w[1]->ack_tail] == NULL)
+        {
+            w[1]->ack_tail = (w[1]->ack_tail + 1) % BUFF_LEN;
+            continue;
+        }
+
+        // set tmp pointer
+        if(w[0]->wait_ack_buff[w[0]->ack_tail]->id < w[1]->wait_ack_buff[w[1]->ack_tail]->id)
+        {
+            printf("%d %3d -: %d\n", w[0]->id, w[0]->ack_tail, w[0]->wait_ack_buff[w[0]->ack_tail]->id);
+
+            tmp = w[0]->wait_ack_buff[w[0]->ack_tail];
+
+            w[0]->wait_ack_buff[w[0]->ack_tail] = NULL;
+            w[0]->ack_tail = (w[0]->ack_tail + 1) % BUFF_LEN;
+            w[0]->ack_num--;
+        }
+        else
+        {
+            printf("%d %3d -: %d\n", w[1]->id, w[1]->ack_tail, w[1]->wait_ack_buff[w[1]->ack_tail]->id);
+
+            tmp = w[1]->wait_ack_buff[w[1]->ack_tail];
+
+            w[1]->wait_ack_buff[w[1]->ack_tail] = NULL;
+            w[1]->ack_tail = (w[1]->ack_tail + 1) % BUFF_LEN;
+            w[1]->ack_num--;
+        }
+
+        // push it actually to esc buffer
+        if(tmp != NULL)
+        {
+            m->esc_data[m->esc_head] = tmp;
+            m->esc_head = (m->esc_head + 1) % (BUFF_LEN*2);
+            m->esc_num++;
+        }
+
+        // make tmp pointer null again
+        tmp = NULL;
+
+        if(w[0]->ack_num == 0)
+        {
+            nw = w[1];
+            break;
+        }
+        if(w[1]->ack_num == 0)
+        {
+            nw = w[0];
+            break;
+        }
+    }
+
+    if(nw == NULL && w[0]->wait_ack_buff[w[0]->ack_tail])
+    {
+        nw = w[0];
+        printf("One empty, go on with another! %d, choice %d %d\n", i, nw->id, nw->ack_num);
+    }
+    else if(nw == NULL && w[1]->wait_ack_buff[w[1]->ack_tail])
+    {
+        nw = w[1];
+        printf("One empty, go on with another! %d, choice %d %d\n", i, nw->id, nw->ack_num);
+    }
+
+    while(nw != NULL && nw->ack_num)
+    {
+        if(nw->wait_ack_buff[nw->ack_tail] != NULL)
+        {
+            printf("Escaping: %d\n", nw->wait_ack_buff[nw->ack_tail]->id);
+
+            m->esc_data[m->esc_head] = nw->wait_ack_buff[nw->ack_tail];
+            m->esc_head = (m->esc_head + 1) % (BUFF_LEN*2);
+            m->esc_num++;
+
+        }
+
+        nw->wait_ack_buff[nw->ack_tail] = NULL;
+        nw->ack_tail = (nw->ack_tail + 1) % BUFF_LEN;
+        nw->ack_num--;
+    }
+
+    w[0]->ack_head = 0;
+    w[0]->ack_tail = 0;
+    w[0]->ack_num  = 0;
+
+    w[1]->ack_tail = 0;
+    w[1]->ack_head = 0;
+    w[1]->ack_num  = 0;
+
+    pthread_mutex_unlock(&m->workers[0]->wait_ack_buff_mx);
+    pthread_mutex_unlock(&m->workers[1]->wait_ack_buff_mx);
+    pthread_mutex_unlock(&m->esc_mx);
+
+
+    // restart workers
+    match_workers(m);
+    puts("workers matched");
 }
