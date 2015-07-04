@@ -63,6 +63,9 @@ char* pcapu_read_if_mac_s(char *dev_name, char **mac_s)
     sprintf(path, "%s%s/address", SYSFS_DEV_PATH, dev_name);
     FILE *f = fopen(path, "r");
 
+    if(f == NULL)
+        return NULL;
+
     getline(&addr, &n, f);
     fclose(f);
 
@@ -166,6 +169,12 @@ int pcapu_find_all_devs(char ***dev_arr)
         {
             sprintf(path, "%s%s/carrier", SYSFS_DEV_PATH, d->name);
             f = fopen(path, "r");
+
+            if(f == NULL)
+            {
+                continue;
+            }
+
             fscanf(f, "%d", &carrier_state);
             fclose(f);
 

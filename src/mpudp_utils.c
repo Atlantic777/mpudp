@@ -65,6 +65,10 @@ void mpudp_build_config(int n, char **iface_names_list, mpudp_config_t *config)
         strcpy(config->if_list[i].name, iface_names_list[i]);
 
         tmp = pcapu_read_if_mac_s(iface_names_list[i], NULL);
+
+        if(tmp == NULL)
+            continue;
+
         mac2chars(tmp, config->if_list[i].mac);
 
         tmp = pcapu_read_if_ip_s(dev, NULL);
@@ -104,6 +108,9 @@ int mpudp_chars2config(mpudp_config_t *config, uint8_t *data, int len)
     config->num_if  = data[1];
     config->if_list = malloc(DESC_LEN*config->num_if);
 
+    if(config->num_if < 0 || config->num_if > 4)
+        return -1;
+
     int i;
     for(i = 0; i < config->num_if; i++)
     {
@@ -120,7 +127,7 @@ int mpudp_packet2chars(mpudp_packet_t *packet, uint8_t **payload)
 
     memcpy(dst, packet, 12);
 
-    if(packet->len > 0)
+    if(packet->len > 0 || packet->type < 0 || packet->type > 2)
         memcpy(dst+12, packet->payload, packet->len);
 
     return 12+packet->len;
