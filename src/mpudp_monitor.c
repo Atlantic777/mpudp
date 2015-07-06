@@ -64,6 +64,8 @@ void* monitor_config_announcer(void *arg)
         int num_ifaces = pcapu_find_all_devs(&iface_names_list);
         mpudp_build_config(num_ifaces, iface_names_list, config);
 
+        /* puts("Config announcer woke up!"); */
+
         if(mpudp_config_different(m->local_config, config))
         {
             config->id = m->local_config->id + 1;
@@ -106,7 +108,8 @@ void* monitor_config_receiver(void *arg)
 
         mpudp_print_config(m->remote_config);
 
-        match_workers(m);
+        /* match_workers(m); */
+        reconfigure_workers(m);
     }
 
 }
@@ -133,6 +136,8 @@ void match_workers(monitor_t *m)
                 chars2mac(m->remote_config->if_list[j].mac, m->workers[i]->dst_mac);
                 m->workers[i]->dst_port = m->remote_config->if_list[j].port;
                 m->workers[i]->state = WORKER_CONNECTED;
+                m->workers[i]->if_handle = pcap_open_live(m->workers[i]->if_desc->name, 2000, 0, 5,
+                        m->workers[i]->errbuf);
                 break;
             }
             else
@@ -280,6 +285,7 @@ void reconfigure_workers(monitor_t *m)
             tmp = w[0]->wait_ack_buff[w[0]->ack_tail];
 
             w[0]->wait_ack_buff[w[0]->ack_tail] = NULL;
+            w[0]->arq_count[w[0]->ack_tail] = 0;
             w[0]->ack_tail = (w[0]->ack_tail + 1) % BUFF_LEN;
             w[0]->ack_num--;
         }
@@ -290,6 +296,7 @@ void reconfigure_workers(monitor_t *m)
             tmp = w[1]->wait_ack_buff[w[1]->ack_tail];
 
             w[1]->wait_ack_buff[w[1]->ack_tail] = NULL;
+            w[1]->arq_count[w[1]->ack_tail] = 0;
             w[1]->ack_tail = (w[1]->ack_tail + 1) % BUFF_LEN;
             w[1]->ack_num--;
         }
@@ -341,6 +348,7 @@ void reconfigure_workers(monitor_t *m)
         }
 
         nw->wait_ack_buff[nw->ack_tail] = NULL;
+        nw->arq_count[nw->ack_tail] = 0;
         nw->ack_tail = (nw->ack_tail + 1) % BUFF_LEN;
         nw->ack_num--;
     }

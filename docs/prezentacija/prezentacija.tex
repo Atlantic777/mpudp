@@ -1,0 +1,255 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usetheme{Copenhagen}
+\usecolortheme{beaver}
+
+\title{MultiPath User Datagram Protocol}
+\author{Nikola Hardi}
+\institute{FTN - Fakultet Tehničkih Nauka - Novi Sad}
+
+\begin{document}
+    \begin{frame}
+        \titlepage
+    \end{frame}
+
+\section{Opis projekta}
+    \begin{frame}
+        \frametitle{Opis zahteva, po prioritetima}
+
+        \begin{enumerate}
+            \item{Raspodela resursa - prenos putem svih pogodnih kanala}
+            \item{Pouzdanost - automatska retransmisija (ARQ)}
+            \item{Robusnost - promena lokalne ili udaljene konfiguracije}
+            \item{Brzina prenosa - iskoristiti potencijal raspoloživih kanala}
+        \end{enumerate}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Dodatni zahtevi}
+        \begin{itemize}
+            \item{Implementacija pogodna za dalje istraživanje}
+            \item{Jednostavnost upotrebe sa strane korisnika (autokonfiguracija)}
+            \item{Automatska konfiguracija i otkrivanje okruženja}
+            \item{Dosledna arhitektura - slanje i prijem samo u jednoj tački}
+            \item{Reč je o streamu proizvoljne i nepoznate dužine}
+            \item{Full Duplex prenos, multimaster}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Pretpostavke}
+
+        \begin{itemize}
+            \item{Proizvoljan broj kanala}
+            \item{Pri inicijalizaciji su dostupni svi kanali}
+            \item{Implementacija prilagođena uobičajenim bibliotekama.
+                Blokirajuća funkcija za prijem paketa i jednostavna promena
+                TCP/IP sloja i uklanjanje PCAP biblioteke}
+            \item{POSIX/Linux okruženje}
+        \end{itemize}
+    \end{frame}
+    \begin{frame}
+        \frametitle{Pomoćne biblioteke:  *\_utils}
+        \begin{itemize}
+            \item[eth]{ethernet okviri}
+            \item[ip]{IP datagrami}
+            \item[udp]{UDP datagrami}
+            \item[mpudp]{MPUDP paketi i korisničke funkcije}
+            \item[pcap]{proširenja pcap biblioteke}
+            \item[net]{manipulacija mrežnim adresama}
+        \end{itemize}
+
+        \begin{itemize}
+            \item{Građenje paketa}
+            \item{Manipulacija zaglavljima}
+            \item{Postavljanje korisničkih podataka (payload)}
+            \item{Deskriptori mrežnih interfejsa}
+        \end{itemize}
+    \end{frame}
+
+\section{Opis protokola}
+    \begin{frame}
+        \frametitle{Tipovi paketa}
+
+        \begin{itemize}
+            \item{konfiguracija - opis konfiguracije kanala}
+            \item{korisnicki podaci}
+            \item{potvrda prijema}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Uspostavljanje veze}
+
+        \begin{itemize}
+            \item{Kreiranje lokalne konfiguracije}
+            \item{Objavljivanje lokalne konfiguracije}
+            \item{Prihvatanje nove udaljene konfiguracije}
+            \item{Uparivanje kanala i početak prenosa korisničkih podataka}
+        \end{itemize}
+    \end{frame}
+
+
+    \begin{frame}
+        \frametitle{Slanje podataka}
+
+        \begin{itemize}
+            \item{Upravljač kanala preuzima nove podatke za prenos}
+            \item{Po slanju paketa, paketi sa podacima se smeštaju u
+                    red za čekanje potvrde o prijemu.}
+            \item{Po prijemu potvrde, odgovarajući paket se uklanja iz
+                    reda za čekanje potvrde o prijemu.}
+            \item{Kada je primljena potvrda za paket koji je zaista u
+                    redu za čekanje potvrde o prijemu, tada se taj
+                    paket uklanja i vrši se pomeranje prozora.}
+            \item{Ako se pomeranjem prozora oslobodilo mesto,
+                    prihvataju se i šalju novi korisnički podaci.}
+            \item{Slanje potvrde o prijemu i konfiguracije ne zahteva potvrdu,
+                    pa ni mesto u redu za čekanje potvrde o prijemu.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Prijem podataka}
+
+        \begin{itemize}
+            \item{Po inicijalizaciji počinje prijem na svakom
+                    odgovarajućem kanalu.}
+            \item{Ukoliko je primljen paket sa konfiguracijom novijom
+                    od poslednje poznate udaljene konfiguracije,
+                    tada se ažurira udaljena konfiguracija i ponovo se
+                    uparuju kanali.}
+            \item{Ukoliko je primljen paket sa podacima i ti podaci
+                    mogu da budu prihvaćeni, oni se smeštaju u korisnički
+                    red sa dolaznim paketima i šalje se potvrda o prijemu.}
+            \item{Ukoliko je primljen paket potvrde, proverava se red za
+                    čekanje potvrde i traži se odgovarajući paket. Prozor
+                    za slanje se pomera ukoliko je moguće.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Retransmisija}
+
+        \begin{itemize}
+            \item{Pri slanju svakog korisničkog paketa beleži se vreme slanja.}
+            \item{Periodično se proverava red za čekanje potvrde. Za svaki
+                    paket za koji nije stigla potvrda, poredi se poslednje
+                    vreme slanja sa trenutnim vremenom i ukoliko je razlika
+                    veća od zadate vrši se retransmisija.}
+            \item{Pri svakoj retransmisiji se beleži broj koliko puta je paket
+                    poslat. Ukoliko je neki paket poslat više puta od zadate
+                    granice, tada se kanal smatra loše konfigurisanim ili
+                    isključenim.}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Rekonfiguracija (uparivanje linkova)}
+
+        \begin{itemize}
+            \item{Jedna sesija se sastoji od jednog ili više uparenih kanala.}
+            \item{Pri inicijalizaciji i tokom rada se prati stanje lokalne
+                    konfiguracije. Kada dođe do promene lokalne konfiguracije,
+                    započinje proces rekonfiguracije.}
+            \item{Po prijemu nove udaljene konfiguracije, započinje proces
+                    rekonfiguracije.}
+            \item{Rekonfiguracija se sastoji od:}
+                \begin{itemize}
+                    \item{pražnjenja redova za čekanje potvrde iz svih
+                        kanala u rastućem redosledu ID paketa.}
+                    \item{uparivanja lokalnih i udaljenih kanala}
+                \end{itemize}
+            \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Lokalna manipulacija paketima}
+
+        \begin{itemize}
+            \item{Korisniku su dostupni samo dolazni i odlazni red}
+            \item{Paketi mogu da dolaze u i dolaze u kanal samo u dolaznoj
+                    odnosno odlaznoj niti.}
+            \item{Svaki kanal ima svoje dolazne/odlazne niti.}
+        \end{itemize}
+    \end{frame}
+
+\section{Primer konkretne implementacija}
+    \begin{frame}
+        \frametitle{Terminologija: Monitor}
+
+        \begin{itemize}
+            \item[monitor]{upravljanje jednom sesijom}
+            \item[worker]{upravljanje jednim kanalom}
+        \end{itemize}
+
+        Monitor je zadužen za:
+        \begin{itemize}
+            \item{Komunikaciju sa korisnikom}
+            \item{Inicijalizaciju i konfiguraciju sistema}
+            \item{Praćenje lokalne konfiguracije}
+            \item{Prihvatanje udaljene konfiguracije}
+        \end{itemize}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Terminologija: Worker}
+
+        Worker je zadužen za:
+        \begin{itemize}
+            \item{Prijem paketa i prosleđivanje na odgovarajuće mesto u sistemu}
+            \item{Pokušaj reasembliranja poruke (smeštanje korisničkih podataka
+                    u odgovarajućem redosledu)}
+            \item{Praćenje stanja globalnog odlaznog reda i prihvatanje
+                    novih korisničkih podataka ukoliko je to moguće}
+            \item{Praćenje stanja reda za slanje konfiguracije}
+            \item{Praćenje stanja pomoćnog reda za rekonfiguraciju}
+            \item{Praćenje stanja reda za retransmisiju}
+            \item{Slanje potvrde o prijemu}
+            \item{Pomeranje lokalnog klizećeg prozora}
+            \item{Pristup fizičkom sloju}
+        \end{itemize}
+    \end{frame}
+
+    \subsection{Monitor}
+    \begin{frame}
+        \frametitle{Arhitetura sistema}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Broadcasting}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{mpudp\_config\_t \& mpudp\_if\_desc\_t}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Rekonfiguracija}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Prenos korisničkih podataka}
+
+    \end{frame}
+
+    \subsection{Worker}
+    \begin{frame}
+        \frametitle{Tx Thread}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Rx Thread}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{Tx Watcher}
+    \end{frame}
+
+    \begin{frame}
+        \frametitle{ARQ Watcher}
+    \end{frame}
+
+
+\end{document}

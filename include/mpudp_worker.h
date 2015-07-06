@@ -51,6 +51,8 @@ struct worker {
     pcap_t    *if_handle;
     pcap_if_t *if_desc;
 
+    char errbuf[PCAP_ERRBUF_SIZE];
+
     uint8_t state;
 
     char name[6];

@@ -216,9 +216,9 @@ worker_t* init_worker(int id, char *iface_name, monitor_t *m, float choke)
     w->dst_mac = malloc(MAC_LEN_S);
 
 
-    char errbuf[PCAP_ERRBUF_SIZE];
+    /* char errbuf[PCAP_ERRBUF_SIZE]; */
 
-    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, errbuf);
+    w->if_handle = pcap_open_live(w->if_desc->name, 2000, 0, 5, w->errbuf);
     w->state = WORKER_NOT_CONNECTED;
 
     pthread_mutex_init(&w->config_mx, NULL);
@@ -472,12 +472,14 @@ int watchdog_check_state(worker_t *w)
     int worker_state = w->state == WORKER_NOT_CONNECTED;
 
     int has_data = (fetch_user_data && bcast_data && fetch_esc_data);
-    int can_send = (private_tx || worker_state);
+    /* int can_send = (private_tx || worker_state); */
 
     /* printf("[%d] - user: %d, bcast %d, esc_data %d, private_tx %d\n", */
     /*         w->id, fetch_user_data, bcast_data, esc_data, private_tx); */
 
-    return has_data || can_send;
+    /* return has_data || can_send; */
+    int can_send  = (fetch_user_data && fetch_esc_data) || worker_state;
+    return (can_send && bcast_data) || private_tx;
 }
 
 void* worker_arq_watcher(void *arg)
@@ -501,7 +503,7 @@ void* worker_arq_watcher(void *arg)
 
         if(w->state == WORKER_NOT_CONNECTED)
         {
-            printf("[%d] - still not connected\n", w->id);
+            /* printf("[%d] - still not connected\n", w->id); */
             sleep(1);
             continue;
         }
@@ -552,7 +554,7 @@ void* worker_arq_watcher(void *arg)
         pthread_mutex_unlock(&w->wait_ack_buff_mx);
 
         if(flag == 0)
-            usleep(1000000);
+            usleep(500000);
         else
             usleep(10000);
     }

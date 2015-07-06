@@ -11,3 +11,4 @@ unit-test
 tests/playground.c
 t_*
 docs/*
+!docs/prezentacija.tex
